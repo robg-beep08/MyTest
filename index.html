@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSINT Analyzer - Live Tracking</title>
+    <style>
+        :root { --neon-green: #00ff41; --dark-bg: #0d1117; --card-bg: #161b22; }
+        body { font-family: 'Courier New', Courier, monospace; background-color: var(--dark-bg); color: white; margin: 0; padding: 20px; }
+        .dashboard { max-width: 1000px; margin: auto; display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .card { background: var(--card-bg); border: 1px solid #30363d; padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h1, h2 { color: var(--neon-green); text-transform: uppercase; letter-spacing: 2px; }
+        .data-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 0.9em; }
+        .label { color: #8b949e; }
+        .value { color: var(--neon-green); font-weight: bold; text-align: right; }
+        #live-feed { height: 350px; overflow-y: auto; background: black; padding: 10px; font-size: 0.8em; color: #58a6ff; border: 1px solid #30363d; }
+        .alert { color: #ff7b72; font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+        .highlight { background: rgba(0, 255, 65, 0.1); padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<header style="text-align: center; margin-bottom: 30px;">
+    <h1>Piattaforma di Analisi OSINT</h1>
+    <p>Dimostrazione interattiva della tua impronta digitale</p>
+</header>
+
+<div class="dashboard">
+    <div class="main-panel">
+        <div class="card" style="margin-bottom: 20px;">
+            <h2>🕵️ Identità di Rete</h2>
+            <div class="data-row"><span class="label">Indirizzo IP Pubblico:</span> <span id="ip" class="value">Ricerca...</span></div>
+            <div class="data-row"><span class="label">Località (Stima):</span> <span id="geo" class="value">Analisi...</span></div>
+            <div class="data-row"><span class="label">Provider (ISP):</span> <span id="isp" class="value">Analisi...</span></div>
+            <div class="data-row" style="background: rgba(255,0,0,0.1);">
+                <span class="label alert">WebRTC Leak (IP Reale/VPN):</span> 
+                <span id="webrtc" class="value">Test in corso...</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>💻 Hardware & Analisi Avanzata</h2>
+            <div class="data-row"><span class="label">Sistema Operativo:</span> <span id="os" class="value"></span></div>
+            <div class="data-row"><span class="label">Browser:</span> <span id="browser" class="value"></span></div>
+            <div class="data-row"><span class="label">GPU (Scheda Video):</span> <span id="gpu" class="value">Analisi...</span></div>
+            <div class="data-row"><span class="label">Core CPU:</span> <span id="cpu" class="value"></span></div>
+            <div class="data-row"><span class="label">RAM (stima):</span> <span id="ram" class="value"></span></div>
+            <div class="data-row"><span class="label">Batteria:</span> <span id="battery" class="value">N/D</span></div>
+            <div class="data-row"><span class="label">Connessione:</span> <span id="connection" class="value">Analisi...</span></div>
+            <div class="data-row"><span class="label">Tema Preferito:</span> <span id="theme" class="value">Analisi...</span></div>
+            <div class="data-row"><span class="label">Lingue:</span> <span id="languages" class="value">Analisi...</span></div>
+            <div class="data-row"><span class="label">Canvas Fingerprint:</span> <span id="canvas-hash" class="value">Generazione...</span></div>
+        </div>
+    </div>
+
+    <div class="side-panel">
+        <div class="card" style="margin-bottom: 20px; border-color: var(--neon-green);">
+            <h2>👀 Persistenza</h2>
+            <p id="visit-msg" style="font-size: 0.9em; line-height: 1.4;"></p>
+        </div>
+
+        <div class="card">
+            <h2>🛰️ Live Activity Feed</h2>
+            <div id="live-feed"></div>
+        </div>
+    </div>
+</div>
+
+<canvas id="canvas-fp" width="200" height="40" style="display:none;"></canvas>
+
+<script>
+    const feed = document.getElementById('live-feed');
+    function log(msg) {
+        const time = new Date().toLocaleTimeString();
+        feed.innerHTML = `<div>[${time}] ${msg}</div>` + feed.innerHTML;
+    }
+
+    // --- 1. PERSISTENZA ---
+    let visits = localStorage.getItem('osint_v');
+    if (!visits) {
+        visits = 1;
+        document.getElementById('visit-msg').innerHTML = "Prima volta rilevata. Creato ID univoco.";
+    } else {
+        visits = parseInt(visits) + 1;
+        document.getElementById('visit-msg').innerHTML = `Utente riconosciuto. Visita n. <span class='highlight'>${visits}</span>.`;
+        log("Riconosciuto utente ricorrente tramite memoria locale.");
+    }
+    localStorage.setItem('osint_v', visits);
+
+    // --- 2. HARDWARE & BROWSER ---
+    document.getElementById('os').innerText = navigator.platform;
+    document.getElementById('browser').innerText = navigator.userAgent.split(' ').pop();
+    document.getElementById('cpu').innerText = navigator.hardwareConcurrency + " Core";
+    document.getElementById('ram').innerText = (navigator.deviceMemory || "N/D") + " GB";
+    document.getElementById('languages').innerText = navigator.languages.join(', ');
+
+    // GPU
+    const getGPU = () => {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            return debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "N/D";
+        }
+        return "Disabilitato";
+    };
+    document.getElementById('gpu').innerText = getGPU();
+
+    // Preferenze Tema
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.getElementById('theme').innerText = isDarkMode ? "Dark Mode" : "Light Mode";
+
+    // Connessione
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn) {
+        document.getElementById('connection').innerText = `${conn.effectiveType} (~${conn.downlink} Mbps)`;
+    }
+
+    // --- 3. RETE & GEOLOCALIZZAZIONE ---
+    fetch('https://ipapi.co/json/')
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('ip').innerText = data.ip;
+            document.getElementById('geo').innerText = `${data.city}, ${data.country_name}`;
+            document.getElementById('isp').innerText = data.org;
+            log(`Identità di rete: ${data.ip} (${data.org})`);
+        });
+
+    // --- 4. BATTERIA ---
+    if (navigator.getBattery) {
+        navigator.getBattery().then(bat => {
+            const updateBat = () => {
+                document.getElementById('battery').innerText = `${Math.round(bat.level * 100)}% (${bat.charging ? 'In carica' : 'Scarica'})`;
+            };
+            updateBat();
+            bat.addEventListener('levelchange', updateBat);
+        });
+    }
+
+    // --- 5. CANVAS FINGERPRINTING ---
+    const canvas = document.getElementById('canvas-fp');
+    const ctx = canvas.getContext('2d');
+    ctx.fillText("OSINT-ANALYSER-PRO", 10, 10);
+    const canvasData = canvas.toDataURL();
+    let hash = 0;
+    for (let i = 0; i < canvasData.length; i++) {
+        hash = ((hash << 5) - hash) + canvasData.charCodeAt(i);
+        hash |= 0;
+    }
+    document.getElementById('canvas-hash').innerText = Math.abs(hash);
+
+    // --- 6. WEBRTC LEAK ---
+    function getLocalIPs(callback) {
+        const RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+        if (!RTCPeerConnection) return;
+        const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+        pc.createDataChannel("");
+        pc.onicecandidate = (e) => {
+            if (!e.candidate) return;
+            const res = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
+            if (res) callback(res[1]);
+        };
+        pc.createOffer().then(sdp => pc.setLocalDescription(sdp));
+    }
+    getLocalIPs(ip => {
+        if(!document.getElementById('webrtc').innerText.includes(ip)) {
+            document.getElementById('webrtc').innerText = ip;
+            log(`<span class='alert'>LEAK! Trovato indirizzo locale: ${ip}</span>`);
+        }
+    });
+
+    // --- 7. EVENTI LIVE ---
+    window.addEventListener('blur', () => log("<span style='color:#ff7b72'>Pagina de-focalizzata (Switch scheda)</span>"));
+    window.addEventListener('focus', () => log("Pagina tornata in primo piano."));
+    window.addEventListener('click', () => log("Interazione utente: Click rilevato."));
+
+</script>
+</body>
+</html>
