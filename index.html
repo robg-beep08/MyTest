@@ -144,12 +144,49 @@
     }
 
     // 4. NETWORK & CARRIER
-    fetch('https://ipapi.co/json/').then(r => r.json()).then(d => {
-        document.getElementById('ip').innerText = d.ip;
-        document.getElementById('geo').innerText = `${d.city}, ${d.country_name} (${d.postal})`;
-        document.getElementById('isp').innerText = d.org;
-        log(`Network intercept: ${d.ip} via ${d.org}`);
-    }).catch(() => log("Network API blocked. VPN or AdBlock suspected."));
+    // --- ADVANCED MULTI-SOURCE NETWORK PROBE ---
+const networkSources = [
+    {
+        url: 'https://ipwho.is/',
+        map: (d) => ({ ip: d.ip, geo: `${d.city}, ${d.country}`, isp: d.connection.isp || d.connection.org })
+    },
+    {
+        url: 'https://ipapi.co/json/',
+        map: (d) => ({ ip: d.ip, geo: `${d.city}, ${d.country_name}`, isp: d.org })
+    },
+    {
+        url: 'https://freeipapi.com/api/json',
+        map: (d) => ({ ip: d.ipAddress, geo: `${d.cityName}, ${d.countryName}`, isp: d.asName })
+    }
+];
+
+async function probeNetwork(index = 0) {
+    if (index >= networkSources.length) {
+        log("CRITICAL: All network APIs failed. Target may be using aggressive blocking.", true);
+        return;
+    }
+
+    try {
+        log(`Probing network source #${index + 1}...`);
+        const response = await fetch(networkSources[index].url);
+        if (!response.ok) throw new Error("Rate limit or API error");
+        
+        const rawData = await response.json();
+        const data = networkSources[index].map(rawData);
+
+        // Update UI
+        document.getElementById('ip').innerText = data.ip;
+        document.getElementById('geo').innerText = data.geo;
+        document.getElementById('isp').innerText = data.isp;
+        
+        log(`Network Identity intercepted via Source #${index + 1}: ${data.ip}`);
+    } catch (err) {
+        log(`Source #${index + 1} failed. Trying next...`);
+        probeNetwork(index + 1); // Fallback al prossimo servizio
+    }
+}
+
+probeNetwork();
 
     const n = navigator.connection;
     if (n) document.getElementById('conn-type').innerText = `${n.effectiveType.toUpperCase()} (Downlink: ${n.downlink}Mbps)`;
