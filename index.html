@@ -90,20 +90,23 @@
 
     // --- 2. HARDWARE & BROWSER ---
     document.getElementById('os').innerText = navigator.platform;
-    // Rilevamento Browser migliorato
+    // Rilevamento Browser Precisione Pro
 const agent = navigator.userAgent;
 let browserName = "Sconosciuto";
 
-if (agent.indexOf("Chrome") > -1 && agent.indexOf("Edg") == -1) {
+// L'ordine è fondamentale: i più specifici vanno per primi
+if (agent.indexOf("OPR") > -1 || agent.indexOf("Opera") > -1) {
+    browserName = "Opera";
+} else if (agent.indexOf("Edg") > -1) {
+    browserName = "Microsoft Edge";
+} else if (agent.indexOf("Chrome") > -1) {
     browserName = "Google Chrome";
-} else if (agent.indexOf("Safari") > -1 && agent.indexOf("Chrome") == -1) {
+} else if (agent.indexOf("Safari") > -1) {
     browserName = "Apple Safari";
 } else if (agent.indexOf("Firefox") > -1) {
     browserName = "Mozilla Firefox";
-} else if (agent.indexOf("Edg") > -1) {
-    browserName = "Microsoft Edge";
 } else {
-    browserName = agent.split(' ').pop(); // Fallback
+    browserName = "Browser Generico";
 }
 
 document.getElementById('browser').innerText = browserName;
