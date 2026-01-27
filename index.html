@@ -90,7 +90,23 @@
 
     // --- 2. HARDWARE & BROWSER ---
     document.getElementById('os').innerText = navigator.platform;
-    document.getElementById('browser').innerText = navigator.userAgent.split(' ').pop();
+    // Rilevamento Browser migliorato
+const agent = navigator.userAgent;
+let browserName = "Sconosciuto";
+
+if (agent.indexOf("Chrome") > -1 && agent.indexOf("Edg") == -1) {
+    browserName = "Google Chrome";
+} else if (agent.indexOf("Safari") > -1 && agent.indexOf("Chrome") == -1) {
+    browserName = "Apple Safari";
+} else if (agent.indexOf("Firefox") > -1) {
+    browserName = "Mozilla Firefox";
+} else if (agent.indexOf("Edg") > -1) {
+    browserName = "Microsoft Edge";
+} else {
+    browserName = agent.split(' ').pop(); // Fallback
+}
+
+document.getElementById('browser').innerText = browserName;
     document.getElementById('cpu').innerText = navigator.hardwareConcurrency + " Core";
     document.getElementById('ram').innerText = (navigator.deviceMemory || "N/D") + " GB";
     document.getElementById('languages').innerText = navigator.languages.join(', ');
