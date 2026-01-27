@@ -143,33 +143,40 @@
         });
     }
 
-    // 4. NETWORK & CARRIER
-    // --- ADVANCED MULTI-SOURCE NETWORK PROBE ---
+   // --- 4. ADVANCED MULTI-SOURCE NETWORK PROBE (WITH TIMEOUTS) ---
 const networkSources = [
     {
         url: 'https://ipwho.is/',
-        map: (d) => ({ ip: d.ip, geo: `${d.city}, ${d.country}`, isp: d.connection.isp || d.connection.org })
-    },
-    {
-        url: 'https://ipapi.co/json/',
-        map: (d) => ({ ip: d.ip, geo: `${d.city}, ${d.country_name}`, isp: d.org })
+        map: (d) => {
+            if (!d.success) throw new Error("API Limit"); // Controllo specifico per ipwho.is
+            return { ip: d.ip, geo: `${d.city}, ${d.country}`, isp: d.connection.isp || d.connection.org };
+        }
     },
     {
         url: 'https://freeipapi.com/api/json',
         map: (d) => ({ ip: d.ipAddress, geo: `${d.cityName}, ${d.countryName}`, isp: d.asName })
+    },
+    {
+        url: 'https://ipapi.co/json/',
+        map: (d) => ({ ip: d.ip, geo: `${d.city}, ${d.country_name}`, isp: d.org })
     }
 ];
 
 async function probeNetwork(index = 0) {
     if (index >= networkSources.length) {
-        log("CRITICAL: All network APIs failed. Target may be using aggressive blocking.", true);
+        log("CRITICAL: All network APIs failed. Target might be using a high-security VPN or Proxy.", true);
         return;
     }
 
+    // Creiamo un timeout di 4 secondi per ogni tentativo
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
     try {
         log(`Probing network source #${index + 1}...`);
-        const response = await fetch(networkSources[index].url);
-        if (!response.ok) throw new Error("Rate limit or API error");
+        const response = await fetch(networkSources[index].url, { signal: controller.signal });
+        
+        if (!response.ok) throw new Error("Connection error");
         
         const rawData = await response.json();
         const data = networkSources[index].map(rawData);
@@ -180,16 +187,20 @@ async function probeNetwork(index = 0) {
         document.getElementById('isp').innerText = data.isp;
         
         log(`Network Identity intercepted via Source #${index + 1}: ${data.ip}`);
+        clearTimeout(timeoutId);
     } catch (err) {
-        log(`Source #${index + 1} failed. Trying next...`);
-        probeNetwork(index + 1); // Fallback al prossimo servizio
+        clearTimeout(timeoutId);
+        log(`Source #${index + 1} failed or timed out. Trying next...`);
+        probeNetwork(index + 1); 
     }
 }
 
+// Avvio automatico al caricamento
 probeNetwork();
 
-    const n = navigator.connection;
-    if (n) document.getElementById('conn-type').innerText = `${n.effectiveType.toUpperCase()} (Downlink: ${n.downlink}Mbps)`;
+// Gestione Connection Type (Dati locali immediati)
+const n = navigator.connection;
+if (n) document.getElementById('conn-type').innerText = `${n.effectiveType.toUpperCase()} (Downlink: ${n.downlink}Mbps)`;
 
     // 5. WEBRTC LEAK
     const pc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
