@@ -3,191 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OSINT Analyzer - Live Tracking</title>
+    <title>Digital X-RAY | Advanced Digital Fingerprinting</title>
     <style>
-        :root { --neon-green: #00ff41; --dark-bg: #0d1117; --card-bg: #161b22; }
-        body { font-family: 'Courier New', Courier, monospace; background-color: var(--dark-bg); color: white; margin: 0; padding: 20px; }
-        .dashboard { max-width: 1000px; margin: auto; display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-        .card { background: var(--card-bg); border: 1px solid #30363d; padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        h1, h2 { color: var(--neon-green); text-transform: uppercase; letter-spacing: 2px; }
-        .data-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 0.9em; }
-        .label { color: #8b949e; }
-        .value { color: var(--neon-green); font-weight: bold; text-align: right; }
-        #live-feed { height: 350px; overflow-y: auto; background: black; padding: 10px; font-size: 0.8em; color: #58a6ff; border: 1px solid #30363d; }
-        .alert { color: #ff7b72; font-weight: bold; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
-        .highlight { background: rgba(0, 255, 65, 0.1); padding: 2px 5px; border-radius: 3px; }
+        :root { --neon: #00ff41; --alert: #ff3e3e; --bg: #0a0c10; --card: #1c2128; --blue: #58a6ff; }
+        body { font-family: 'Segoe UI', 'Courier New', monospace; background: var(--bg); color: #adbac7; margin: 0; padding: 20px; overflow-x: hidden; }
+        .wrapper { max-width: 1100px; margin: auto; }
+        h1 { color: var(--neon); text-align: center; text-transform: uppercase; letter-spacing: 4px; border-bottom: 2px solid var(--neon); padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+        .card { background: var(--card); border: 1px solid #444c56; border-radius: 6px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { color: var(--neon); font-size: 1.2rem; border-bottom: 1px solid #444c56; padding-bottom: 10px; margin-top: 0; }
+        .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2d333b; font-size: 0.85rem; }
+        .label { color: #768390; font-weight: bold; }
+        .val { color: var(--neon); font-weight: bold; text-align: right; word-break: break-all; max-width: 60%; }
+        #feed { height: 400px; overflow-y: auto; background: #000; border: 1px solid var(--neon); padding: 10px; font-size: 0.8rem; font-family: monospace; color: var(--blue); }
+        .log-entry { margin-bottom: 5px; border-left: 2px solid var(--blue); padding-left: 8px; }
+        .critical { color: var(--alert); font-weight: bold; text-transform: uppercase; animation: flash 1s infinite; }
+        @keyframes flash { 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
 
-<header style="text-align: center; margin-bottom: 30px;">
-    <h1>Digital Analytics Platform</h1>
-    <p>Interactive demonstration of your digital footprint</p>
-</header>
+<div class="wrapper">
+    <h1> X-RAY INTERFACE</h1>
+    
+    <div class="grid">
+        <div class="col">
+            <div class="card" style="margin-bottom: 20px;">
+                <h2>📡 Network Intelligence</h2>
+                <div class="row"><span class="label">Public IPv4:</span> <span id="ip" class="val">CONNECTING...</span></div>
+                <div class="row"><span class="label">ISP / Carrier:</span> <span id="isp" class="val" style="color: #ffca28;">PROBING...</span></div>
+                <div class="row"><span class="label">Location:</span> <span id="geo" class="val">GEOLOCATING...</span></div>
+                <div class="row" style="background: rgba(255,0,0,0.1);"><span class="label" style="color:var(--alert)">WebRTC Leak (Internal IP):</span> <span id="webrtc" class="val">TESTING...</span></div>
+                <div class="row"><span class="label">Connection Tech:</span> <span id="conn-type" class="val">N/A</span></div>
+            </div>
 
-<div class="dashboard">
-    <div class="main-panel">
-        <div class="card" style="margin-bottom: 20px;">
-            <h2>🕵️ Network Identity</h2>
-            <div class="data-row"><span class="label">Public IP Address:</span> <span id="ip" class="value">Searching...</span></div>
-            <div class="data-row"><span class="label">Estimated Location:</span> <span id="geo" class="value">Analyzing...</span></div>
-            <div class="data-row"><span class="label">Carrier / ISP:</span> <span id="isp" class="value" style="color: #ffca28;">Analyzing...</span></div>
-            <div class="data-row" style="background: rgba(255,0,0,0.1);">
-                <span class="label alert">WebRTC Leak (Real/VPN IP):</span> 
-                <span id="webrtc" class="value">Testing...</span>
+            <div class="card">
+                <h2>📱 Device & Hardware Forensics</h2>
+                <div class="row"><span class="label">Device Brand/Model:</span> <span id="model" class="val" style="color:white;">DETECTING...</span></div>
+                <div class="row"><span class="label">OS Platform:</span> <span id="os" class="val"></span></div>
+                <div class="row"><span class="label">CPU Architecture:</span> <span id="cpu" class="val"></span></div>
+                <div class="row"><span class="label">GPU Renderer:</span> <span id="gpu" class="val"></span></div>
+                <div class="row"><span class="label">RAM Capacity:</span> <span id="ram" class="val"></span></div>
+                <div class="row"><span class="label">Battery Life:</span> <span id="battery" class="val">N/A</span></div>
+                <div class="row"><span class="label">Screen Resolution:</span> <span id="screen" class="val"></span></div>
             </div>
         </div>
 
-        <div class="card">
-            <h2>💻 Hardware & Advanced Analytics</h2>
-            <div class="data-row"><span class="label">Operating System:</span> <span id="os" class="value"></span></div>
-            <div class="data-row"><span class="label">Detected Browser:</span> <span id="browser" class="value"></span></div>
-            <div class="data-row"><span class="label">GPU (Graphics Card):</span> <span id="gpu" class="value">Analyzing...</span></div>
-            <div class="data-row"><span class="label">CPU Cores:</span> <span id="cpu" class="value"></span></div>
-            <div class="data-row"><span class="label">RAM (Estimate):</span> <span id="ram" class="value"></span></div>
-            <div class="data-row"><span class="label">Battery Status:</span> <span id="battery" class="value">N/A</span></div>
-            <div class="data-row"><span class="label">Connection Type:</span> <span id="connection" class="value">Analyzing...</span></div>
-            <div class="data-row"><span class="label">System Theme:</span> <span id="theme" class="value">Analyzing...</span></div>
-            <div class="data-row"><span class="label">Languages:</span> <span id="languages" class="value">Analyzing...</span></div>
-            <div class="data-row"><span class="label">Canvas Fingerprint:</span> <span id="canvas-hash" class="value">Generating...</span></div>
-            <div class="data-row" style="font-size: 0.7em; color: #58a6ff;">
-                <span class="label">Raw User-Agent:</span> 
-                <span id="raw-agent" style="word-break: break-all; text-align: right;"></span>
+        <div class="col">
+            <div class="card" style="margin-bottom: 20px;">
+                <h2>🌐 Browser Environment</h2>
+                <div class="row"><span class="label">Identity:</span> <span id="browser" class="val"></span></div>
+                <div class="row"><span class="label">Preferred Languages:</span> <span id="lang" class="val"></span></div>
+                <div class="row"><span class="label">Timezone:</span> <span id="tz" class="val"></span></div>
+                <div class="row"><span class="label">System Theme:</span> <span id="theme" class="val"></span></div>
+                <div class="row"><span class="label">Do Not Track (DNT):</span> <span id="dnt" class="val"></span></div>
+                <div class="row"><span class="label">Unique Fingerprint:</span> <span id="fp" class="val" style="font-size: 0.7rem;">CALCULATING...</span></div>
             </div>
-        </div>
-    </div>
 
-    <div class="side-panel">
-        <div class="card" style="margin-bottom: 20px; border-color: var(--neon-green);">
-            <h2>👀 Persistence</h2>
-            <p id="visit-msg" style="font-size: 0.9em; line-height: 1.4;"></p>
-        </div>
-
-        <div class="card">
-            <h2>🛰️ Satellite Activity Feed</h2>
-            <div id="live-feed"></div>
+            <div class="card">
+                <h2>🛰️ Live Metadata Interception</h2>
+                <div id="feed"></div>
+                <p id="persistence" style="font-size: 0.75rem; margin-top: 10px; color: var(--blue);"></p>
+            </div>
         </div>
     </div>
 </div>
 
-<canvas id="canvas-fp" width="200" height="40" style="display:none;"></canvas>
+<canvas id="canv" width="200" height="40" style="display:none;"></canvas>
 
 <script>
-    const feed = document.getElementById('live-feed');
-    function log(msg) {
+    const feed = document.getElementById('feed');
+    const log = (msg, isCritical = false) => {
         const time = new Date().toLocaleTimeString();
-        feed.innerHTML = `<div>[${time}] ${msg}</div>` + feed.innerHTML;
-    }
-
-    // --- 1. PERSISTENCE (Tracking) ---
-    let visits = localStorage.getItem('osint_v');
-    if (!visits) {
-        visits = 1;
-        document.getElementById('visit-msg').innerHTML = "First-time visitor detected. <span class='highlight'>Unique ID generated</span>.";
-    } else {
-        visits = parseInt(visits) + 1;
-        document.getElementById('visit-msg').innerHTML = `Returning user identified. Visit count: <span class='highlight'>${visits}</span>.`;
-        log("Returning user identified via local storage.");
-    }
-    localStorage.setItem('osint_v', visits);
-
-    // --- 2. HARDWARE & BROWSER DETECTION ---
-    document.getElementById('os').innerText = navigator.platform;
-    document.getElementById('raw-agent').innerText = navigator.userAgent;
-
-    // Improved Browser Detection Logic
-    const agent = navigator.userAgent;
-    let bName = "Unknown";
-    if (agent.indexOf("OPR") > -1 || agent.indexOf("Opera") > -1) bName = "Opera";
-    else if (agent.indexOf("Edg") > -1) bName = "Microsoft Edge";
-    else if (agent.indexOf("Chrome") > -1) bName = "Google Chrome";
-    else if (agent.indexOf("Safari") > -1) bName = "Apple Safari";
-    else if (agent.indexOf("Firefox") > -1) bName = "Mozilla Firefox";
-    document.getElementById('browser').innerText = bName;
-
-    document.getElementById('cpu').innerText = navigator.hardwareConcurrency + " Cores";
-    document.getElementById('ram').innerText = (navigator.deviceMemory || "N/A") + " GB";
-    document.getElementById('languages').innerText = navigator.languages.join(', ');
-
-    // GPU Detection
-    const getGPU = () => {
-        const canvas = document.createElement('canvas');
-        const gl = canvas.getContext('webgl');
-        if (gl) {
-            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-            return debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "N/A";
-        }
-        return "Disabled";
+        const cls = isCritical ? 'log-entry critical' : 'log-entry';
+        feed.innerHTML = `<div class="${cls}">[${time}] ${msg}</div>` + feed.innerHTML;
     };
-    document.getElementById('gpu').innerText = getGPU();
 
-    // Theme Preference
-    document.getElementById('theme').innerText = window.matchMedia('(prefers-color-scheme: dark)').matches ? "Dark Mode" : "Light Mode";
+    // 1. PERSISTENCE CHECK
+    let v = localStorage.getItem('osint_v') || 0;
+    v++; localStorage.setItem('osint_v', v);
+    document.getElementById('persistence').innerText = v > 1 ? `RECURRING TARGET: Visit #${v} detected via LocalStorage.` : "NEW TARGET: No previous local traces found.";
+    if(v > 1) log(`Target re-identified. Persistence Match #${v}.`, true);
 
-    // Connection Info
-    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    if (conn) document.getElementById('connection').innerText = `${conn.effectiveType} (~${conn.downlink} Mbps)`;
+    // 2. ADVANCED DEVICE & BROWSER DETECTION
+    const ua = navigator.userAgent;
+    document.getElementById('os').innerText = navigator.platform;
+    document.getElementById('screen').innerText = `${screen.width}x${screen.height} (${screen.colorDepth}-bit)`;
+    document.getElementById('tz').innerText = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.getElementById('lang').innerText = navigator.languages.join(', ');
+    document.getElementById('dnt').innerText = navigator.doNotTrack === "1" ? "ENABLED" : "DISABLED";
 
-    // --- 3. NETWORK & CARRIER (API) ---
-    fetch('https://ipapi.co/json/')
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById('ip').innerText = data.ip;
-            document.getElementById('geo').innerText = `${data.city}, ${data.country_name}`;
-            document.getElementById('isp').innerText = data.org || "Unknown Carrier";
-            log(`Network Identity: ${data.ip} (${data.org})`);
-        })
-        .catch(() => log("Network API blocked by browser extension."));
+    // Precise Browser Logic
+    let b = "Unknown";
+    if (ua.includes("OPR") || ua.includes("Opera")) b = "Opera";
+    else if (ua.includes("Edg")) b = "MS Edge";
+    else if (ua.includes("Firefox")) b = "Firefox";
+    else if (ua.includes("Chrome")) b = "Chrome";
+    else if (ua.includes("Safari")) b = "Safari";
+    document.getElementById('browser').innerText = b;
 
-    // --- 4. BATTERY ---
-    if (navigator.getBattery) {
-        navigator.getBattery().then(bat => {
-            const updateBat = () => {
-                document.getElementById('battery').innerText = `${Math.round(bat.level * 100)}% (${bat.charging ? 'Charging' : 'Discharging'})`;
-            };
-            updateBat();
-            bat.addEventListener('levelchange', updateBat);
+    // Advanced Device Model Detection
+    let modelName = "Unknown Mobile/PC";
+    if (/android/i.test(ua)) {
+        const match = ua.match(/Android\s+([^\s]+);(?:\s+([^;]+);)?\s+([^)]+)/);
+        modelName = match ? (match[3] || match[2] || "Android Device").split("Build")[0] : "Android Device";
+    } else if (/iPhone|iPad/.test(ua)) {
+        modelName = "Apple iOS Device";
+    }
+    document.getElementById('model').innerText = modelName;
+
+    // Client Hints API (High Entropy)
+    if (navigator.userAgentData?.getHighEntropyValues) {
+        navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion']).then(u => {
+            if(u.model) {
+                document.getElementById('model').innerText = u.model;
+                log(`CRITICAL: High-entropy hardware signature: ${u.model}`, true);
+            }
         });
     }
 
-    // --- 5. CANVAS FINGERPRINTING ---
-    const canvas = document.getElementById('canvas-fp');
-    const ctx = canvas.getContext('2d');
-    ctx.fillText("OSINT-ANALYSER-PRO", 10, 10);
-    const canvasData = canvas.toDataURL();
-    let hash = 0;
-    for (let i = 0; i < canvasData.length; i++) {
-        hash = ((hash << 5) - hash) + canvasData.charCodeAt(i);
-        hash |= 0;
-    }
-    document.getElementById('canvas-hash').innerText = Math.abs(hash);
+    // 3. HARDWARE FORENSICS
+    document.getElementById('cpu').innerText = `${navigator.hardwareConcurrency || 'N/A'} logical cores`;
+    document.getElementById('ram').innerText = `~${navigator.deviceMemory || 'N/A'} GB`;
+    document.getElementById('theme').innerText = window.matchMedia('(prefers-color-scheme: dark)').matches ? "Dark Mode" : "Light Mode";
 
-    // --- 6. WEBRTC LEAK ---
-    function getLocalIPs(callback) {
-        const RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
-        if (!RTCPeerConnection) return;
-        const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
-        pc.createDataChannel("");
-        pc.onicecandidate = (e) => {
-            if (!e.candidate) return;
-            const res = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
-            if (res) callback(res[1]);
-        };
-        pc.createOffer().then(sdp => pc.setLocalDescription(sdp));
+    // GPU
+    const gl = document.createElement('canvas').getContext('webgl');
+    if (gl) {
+        const debug = gl.getExtension('WEBGL_debug_renderer_info');
+        document.getElementById('gpu').innerText = debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : "Generic";
     }
-    getLocalIPs(ip => {
-        if(!document.getElementById('webrtc').innerText.includes(ip)) {
-            document.getElementById('webrtc').innerText = ip;
-            log(`<span class='alert'>LEAK! Internal IP Address Found: ${ip}</span>`);
+
+    // Battery
+    if (navigator.getBattery) {
+        navigator.getBattery().then(bt => {
+            const up = () => document.getElementById('battery').innerText = `${Math.round(bt.level * 100)}% (${bt.charging ? 'Charging' : 'Unplugged'})`;
+            up(); bt.onlevelchange = up;
+        });
+    }
+
+    // 4. NETWORK & CARRIER
+    fetch('https://ipapi.co/json/').then(r => r.json()).then(d => {
+        document.getElementById('ip').innerText = d.ip;
+        document.getElementById('geo').innerText = `${d.city}, ${d.country_name} (${d.postal})`;
+        document.getElementById('isp').innerText = d.org;
+        log(`Network intercept: ${d.ip} via ${d.org}`);
+    }).catch(() => log("Network API blocked. VPN or AdBlock suspected."));
+
+    const n = navigator.connection;
+    if (n) document.getElementById('conn-type').innerText = `${n.effectiveType.toUpperCase()} (Downlink: ${n.downlink}Mbps)`;
+
+    // 5. WEBRTC LEAK
+    const pc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
+    pc.createDataChannel("");
+    pc.onicecandidate = e => {
+        if (!e.candidate) return;
+        const res = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
+        if (res) {
+            document.getElementById('webrtc').innerText = res[1];
+            log(`SECURITY BREACH: Local IP leaked: ${res[1]}`, true);
         }
-    });
+    };
+    pc.createOffer().then(s => pc.setLocalDescription(s));
 
-    // --- 7. LIVE EVENTS ---
-    window.addEventListener('blur', () => log("<span style='color:#ff7b72'>Page defocused (Tab switch)</span>"));
-    window.addEventListener('focus', () => log("Page back in focus. Monitoring resumed."));
-    window.addEventListener('click', () => log("User Interaction: Click detected."));
+    // 6. FINGERPRINTING
+    const c = document.getElementById('canv');
+    const ct = c.getContext('2d');
+    ct.fillText("OSINT-ANALYSER-PRO", 2, 10);
+    let h = 0, str = c.toDataURL();
+    for(let i=0; i<str.length; i++) h = ((h << 5) - h) + str.charCodeAt(i);
+    document.getElementById('fp').innerText = `ID-${Math.abs(h)}`;
 
+    // 7. BEHAVIORAL LOGS
+    window.onblur = () => log("WARNING: Target switched tab/window.", true);
+    window.onfocus = () => log("Target returned to interface.");
+    window.onclick = () => log("Interaction: Mouse click recorded.");
+    log("System initialized. Monitoring digital footprint...");
 </script>
+
 </body>
 </html>
