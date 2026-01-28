@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital X-RAY | Active Hunter v16</title>
+    <title>Digital X-RAY | Bulletproof v17</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
@@ -46,7 +46,8 @@
         .ua-box { background: #000; border: 1px dashed #333; padding: 8px; margin-top: 10px; font-size: 0.65rem; color: #aaa; font-family: 'Consolas', monospace; word-break: break-all; }
 
         /* Mappa */
-        #map { height: 180px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); }
+        #map { height: 180px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); background: #000; }
+        .map-error { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--alert); font-weight: bold; text-align: center; font-size: 0.8rem; padding: 20px; }
 
         /* STATUS INDICATORS */
         .status-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #222; font-size: 0.8rem; }
@@ -81,18 +82,18 @@
 
 <div class="wrapper">
     <header>
-        <h1>DIGITAL X-RAY v16.0</h1>
-        <div class="subtitle">>>> ACTIVE FILTER HUNTER <<<</div>
+        <h1>DIGITAL X-RAY v17.0</h1>
+        <div class="subtitle">>>> BULLETPROOF SCANNER <<<</div>
     </header>
     
     <div class="grid">
         
         <div class="card" style="border-top-color: var(--blue);">
             <h2>📡 Network & Geo</h2>
-            <div class="row"><span class="label">Public IP:</span> <span id="ip" class="val" style="color:var(--neon)">SCANNING...</span></div>
+            <div class="row"><span class="label">Public IP:</span> <span id="ip" class="val" style="color:var(--neon)">initializing...</span></div>
             <div class="row"><span class="label">ISP / Org:</span> <span id="isp" class="val">...</span></div>
             <div class="row"><span class="label">Location:</span> <span id="geo" class="val">...</span></div>
-            <div class="row"><span class="label">Network Source:</span> <span id="net-source" class="val" style="color:#777; font-size:0.7rem;">...</span></div>
+            <div class="row"><span class="label">Data Source:</span> <span id="net-source" class="val" style="color:#777; font-size:0.7rem;">...</span></div>
             <div id="vpn-warn" class="badge-warn">⚠️ VPN DETECTED (Region Mismatch)</div>
             <div id="map"></div>
         </div>
@@ -123,7 +124,7 @@
             
             <span class="section-title">Anonymity Tools</span>
             <div class="status-row"><span class="status-label">Brave Browser</span><span id="chk-brave" class="status-icon not-detected">✖ NOT DETECTED</span></div>
-            <div class="status-row"><span class="status-label">Tor / VPN IP</span><span id="chk-tor-ip" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">VPN / Tor IP</span><span id="chk-tor-ip" class="status-icon not-detected">✖ NOT DETECTED</span></div>
             <div class="status-row"><span class="status-label">Tor Letterboxing</span><span id="chk-letterbox" class="status-icon not-detected">✖ NOT DETECTED</span></div>
 
             <span class="section-title">Content Filters</span>
@@ -190,7 +191,6 @@
         if(ua.includes("OPR") || ua.includes("Opera")) b="Opera";
         document.getElementById('browser').innerText = b;
 
-        // GPU & Battery
         try {
             const gl = document.createElement('canvas').getContext('webgl');
             const dbg = gl.getExtension('WEBGL_debug_renderer_info');
@@ -199,104 +199,121 @@
         if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
 
 
-        // --- 2. ACTIVE FILTER & BRAVE DETECTION (Nuovo) ---
-        
-        // A. AdBlock Attivo (Controlla se le "esche" sono state nascoste dal CSS dell'estensione)
+        // --- 2. ACTIVE FILTER DETECTION ---
         setTimeout(() => {
             const bait1 = document.getElementById('ad-bait-1');
             const bait2 = document.getElementById('ad-bait-2');
-            
-            // AdBlocker spesso impostano display:none o height:0 agli elementi "ads"
-            // offsetParent è null se l'elemento è nascosto
             if (bait1.offsetParent === null || bait2.offsetParent === null || bait1.clientHeight === 0) {
                 setStatus('chk-adblock', true);
             }
         }, 1000);
 
-        // B. Dark Reader (DOM Injection)
         setTimeout(() => {
             if(document.querySelector('meta[name="darkreader"]') || document.querySelector('style.darkreader')) {
                 setStatus('chk-darkreader', true);
             }
         }, 1000);
 
-        // C. Brave Detection (Via Global Privacy Control)
-        // Brave imposta navigator.globalPrivacyControl = true di default
         if (navigator.globalPrivacyControl || (navigator.brave && typeof navigator.brave.isBrave === "function")) {
              setStatus('chk-brave', true);
-             setStatus('chk-canvas-prot', true); // Brave ha sempre protezione canvas
+             setStatus('chk-canvas-prot', true);
         }
 
-        // D. Tor Letterboxing (Dimensioni Finestra)
         const wDiff = window.outerWidth - window.innerWidth;
         const hDiff = window.outerHeight - window.innerHeight;
-        // Tor aggiunge grossi bordi bianchi (letterboxing)
         if(wDiff > 140 || hDiff > 140) {
              setStatus('chk-letterbox', true);
         }
 
-        // --- 3. ROBUST NETWORK SCAN ---
+        // --- 3. BULLETPROOF NETWORK SCAN (Failover System) ---
         async function runNet() {
+            // Lista di API in ordine di preferenza (Resilienza)
             const sources = [
                 { url: 'https://ipwho.is/', type: 'IpWhoIs' }, 
                 { url: 'https://ipapi.co/json/', type: 'IpApi' },
-                { url: 'https://api.db-ip.com/v2/free/self', type: 'DbIp' }
+                { url: 'https://api.db-ip.com/v2/free/self', type: 'DbIp' },
+                { url: 'https://api.ipify.org?format=json', type: 'Ipify' } // Ultima spiaggia (Solo IP)
             ];
 
             let success = false;
+            let finalIP = "Unknown";
 
             for (const source of sources) {
                 if(success) break;
+                
                 try {
+                    console.log("Pinging: " + source.type); // Debug
                     const res = await fetch(source.url);
                     if(!res.ok) throw new Error("Blocked");
+                    
                     const data = await res.json();
                     
-                    let ip, isp, city, country, tz, lat, lon, isProxy = false;
+                    // Variabili temporanee
+                    let ip, isp, city, country, tz, lat, lon;
+                    let isProxy = false;
 
+                    // Parsing in base al tipo di API
                     if(source.type === 'IpWhoIs') {
-                        if(!data.success) throw new Error("Limit");
+                        if(data.success === false) throw new Error("RateLimit");
                         ip = data.ip; isp = data.connection.isp; city = data.city; country = data.country;
                         tz = data.timezone.id; lat = data.latitude; lon = data.longitude;
                         if(data.security.is_vpn || data.security.is_proxy || data.security.is_tor) isProxy = true;
                     } 
                     else if (source.type === 'IpApi') {
+                        if(data.error) throw new Error("RateLimit");
                         ip = data.ip; isp = data.org; city = data.city; country = data.country_name;
                         tz = data.timezone; lat = data.latitude; lon = data.longitude;
                     }
                     else if (source.type === 'DbIp') {
-                        ip = data.ipAddress; isp = "Unknown"; city = data.city; country = data.countryName;
-                        tz = "Unknown"; lat = 0; lon = 0;
+                        ip = data.ipAddress; isp = "Generic ISP"; city = data.city; country = data.countryName;
+                        tz = "Unknown"; lat = null; lon = null; // DbIp free non da coordinate
+                    }
+                    else if (source.type === 'Ipify') {
+                        ip = data.ip; isp = "Unknown"; city = "Unknown"; country = "Unknown";
+                        lat = null; lon = null;
                     }
 
+                    // Aggiornamento UI
+                    finalIP = ip;
                     document.getElementById('ip').innerText = ip;
                     document.getElementById('isp').innerText = isp;
                     document.getElementById('geo').innerText = `${city}, ${country}`;
-                    if(tz) document.getElementById('ip-tz').innerText = tz;
-                    document.getElementById('net-source').innerText = `Source: ${source.type}`;
+                    document.getElementById('net-source').innerText = `Provider: ${source.type}`;
 
-                    if(lat !== 0 && typeof L !== 'undefined') {
+                    // Gestione Mappa (Solo se abbiamo Lat/Lon valide)
+                    if(lat && lon && typeof L !== 'undefined') {
                         const map = L.map('map').setView([lat, lon], 13);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' }).addTo(map);
                         L.marker([lat, lon]).addTo(map).bindPopup("LOCKED").openPopup();
+                    } else {
+                        // Se l'API non ha coordinate, mostra errore mappa MA non bloccare il resto
+                        document.getElementById('map').innerHTML = "<div class='map-error'>MAP DATA UNAVAILABLE<br>(Source limited or blocked)</div>";
                     }
 
+                    // Controlli Sicurezza
                     if(tz && tz !== "Unknown" && tz.split('/')[0] !== sysTz.split('/')[0]) {
                         document.getElementById('vpn-warn').style.display = 'block';
                     }
                     if(isProxy) setStatus('chk-tor-ip', true);
 
-                    runForensics(ip);
+                    // Successo! Usciamo dal ciclo
                     success = true;
 
-                } catch(e) {}
+                } catch(e) {
+                    console.log(`${source.type} failed: ${e.message}`);
+                }
             }
 
+            // Se TUTTE le API falliscono
             if(!success) {
                 document.getElementById('ip').innerText = "BLOCKED";
-                document.getElementById('net-source').innerText = "All probes failed (AdBlock/Firewall)";
-                setStatus('chk-adblock', true); // Se tutto è bloccato, è un AdBlock potente
+                document.getElementById('ip').style.color = "var(--alert)";
+                document.getElementById('net-source').innerText = "All APIs failed (AdBlock/Firewall)";
+                document.getElementById('map').innerHTML = "<div class='map-error'>CONNECTION BLOCKED</div>";
+                setStatus('chk-adblock', true); 
                 runForensics("Offline");
+            } else {
+                runForensics(finalIP);
             }
         }
         runNet();
@@ -311,7 +328,6 @@
                 
                 try {
                     let b64 = canvas.toDataURL();
-                    // Se Brave/Tor proteggono il canvas, spesso tornano dati vuoti o randomizzati
                     if(b64.length < 50) setStatus('chk-canvas-prot', true);
                     
                     let bin = atob(b64.replace("data:image/png;base64,",""));
