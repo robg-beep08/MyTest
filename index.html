@@ -28,20 +28,12 @@
         .subtitle { font-size: 0.9rem; letter-spacing: 2px; margin-top: 5px; color: #fff; animation: blink 2s infinite; }
 
         /* GRIGLIA */
-        .grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
-            gap: 20px; 
-        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
         
         /* CARDS */
         .card { 
-            background: var(--card); 
-            border: 1px solid #333; 
-            border-top: 3px solid var(--neon); 
-            padding: 15px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-            display: flex; flex-direction: column;
+            background: var(--card); border: 1px solid #333; border-top: 3px solid var(--neon); 
+            padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column;
         }
         h2 { color: var(--neon); font-size: 1.1rem; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; }
         
@@ -50,17 +42,15 @@
         .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; max-width: 65%; }
         
         /* Mappa */
-        #map { 
-            height: 200px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); 
-            filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); 
-        }
+        #map { height: 200px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); }
 
         /* Badge Avvisi */
-        .badge-warn {
-            background: rgba(255, 62, 62, 0.1); border: 1px solid var(--alert);
-            color: var(--alert); padding: 5px; text-align: center; font-weight: bold; font-size: 0.75rem;
-            margin-top: 5px; display: none;
-        }
+        .badge-warn { background: rgba(255, 62, 62, 0.1); border: 1px solid var(--alert); color: var(--alert); padding: 5px; text-align: center; font-weight: bold; font-size: 0.75rem; margin-top: 5px; display: none; }
+
+        /* DNS Box */
+        #dns-box { margin-top: 10px; border: 1px dashed var(--blue); padding: 10px; background: rgba(0, 243, 255, 0.05); }
+        .dns-title { font-size: 0.7rem; color: var(--blue); text-transform: uppercase; display: block; margin-bottom: 5px; }
+        .dns-val { color: #fff; font-family: monospace; font-size: 0.9rem; font-weight: bold; }
 
         /* Zombie Audit */
         .audit-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-top: 5px; background: #1a1a1a; padding: 4px; border-radius: 3px;}
@@ -71,6 +61,12 @@
         .rep-table th { text-align: left; color: var(--alert); border-bottom: 1px solid #444; }
         .rep-table td { color: #ccc; padding: 2px 0; }
 
+        /* Button */
+        .path-btn { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 5px; font-size: 0.7rem; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
+        .path-btn:hover { background: #333; border-color: var(--blue); color: var(--blue); }
+        #disk-paths { display: none; margin-top: 10px; border: 1px dashed #555; padding: 10px; background: #000; }
+        .path-val { font-family: 'Consolas', monospace; color: #aaa; font-size: 0.65rem; word-break: break-all; display: block; margin-bottom: 5px; }
+
         @keyframes blink { 50% { opacity: 0.5; } }
     </style>
 </head>
@@ -78,19 +74,26 @@
 
 <div class="wrapper">
     <header>
-        <h1>DIGITAL X-RAY v10.0</h1>
-        <div class="subtitle">>>> DEEP PACKET INSPECTION <<<</div>
+        <h1>DIGITAL X-RAY v12.0</h1>
+        <div class="subtitle">>>> DNS & PACKET INSPECTION <<<</div>
     </header>
     
     <div class="grid">
         
         <div class="card" style="border-top-color: var(--blue);">
-            <h2>📡 Network Analysis</h2>
+            <h2>📡 Network & DNS</h2>
             <div class="row"><span class="label">Public IPv4:</span> <span id="ip" class="val" style="color:var(--neon)">SCANNING...</span></div>
-            <div class="row"><span class="label">ISP / Carrier:</span> <span id="isp" class="val">...</span></div>
             <div class="row"><span class="label">Location:</span> <span id="geo" class="val">...</span></div>
             <div class="row"><span class="label">Timezone:</span> <span id="ip-tz" class="val">...</span></div>
             
+            <div id="dns-box">
+                <span class="dns-title">🛡️ DNS Traffic Router (Leak Check)</span>
+                <span id="isp" class="dns-val">Analyzing...</span>
+                <p style="font-size:0.65rem; color:#777; margin:5px 0 0 0;">
+                    *If this is your home provider (e.g. TIM, Vodafone) while using VPN, your DNS is <b>LEAKING</b>.
+                </p>
+            </div>
+
             <div id="vpn-warn" class="badge-warn">⚠️ VPN DETECTED (Region Mismatch)</div>
             <div id="map"></div>
         </div>
@@ -106,15 +109,13 @@
         </div>
 
         <div class="card" style="border-top-color: var(--warn);">
-            <h2>🕵️ Browser & Headers</h2>
+            <h2>🕵️ Browser Headers</h2>
             <div class="row"><span class="label">Browser ID:</span> <span id="browser" class="val"></span></div>
             <div class="row"><span class="label">Languages:</span> <span id="lang" class="val" style="color: #fff;"></span></div>
             <div class="row" style="flex-direction: column; align-items: flex-start;">
                 <span class="label" style="margin-bottom: 5px;">User Agent String:</span>
                 <span id="ua" class="val" style="text-align: left; width: 100%; max-width: 100%; font-size: 0.65rem; color: #888;"></span>
             </div>
-            
-            <div class="row"><span class="label">Do Not Track:</span> <span id="dnt" class="val"></span></div>
             
             <div id="incognito-warn" class="badge-warn">🕵️ INCOGNITO MODE DETECTED</div>
             <div id="adblock-warn" class="badge-warn">🚫 AD-BLOCKER ACTIVE</div>
@@ -130,8 +131,16 @@
             <div class="audit-row"><span>📦 LocalStorage:</span><span id="audit-ls" style="color:#555">Clean</span></div>
             <div class="audit-row"><span>🗄️ IndexedDB:</span><span id="audit-idb" style="color:#555">Clean</span></div>
 
+            <button class="path-btn" onclick="showPaths()">📂 Reveal Disk Paths</button>
+            <div id="disk-paths">
+                <span style="color:#fff; font-size:0.7rem;">Cookies:</span>
+                <span id="path-cookie" class="path-val">...</span>
+                <span style="color:#fff; font-size:0.7rem;">Storage:</span>
+                <span id="path-ls" class="path-val">...</span>
+            </div>
+
             <div id="forensic-report">
-                <div style="color:var(--alert); font-weight:bold; text-align:center; font-size:0.75rem;">⚠️ DEVICE RE-IDENTIFIED (IP CHANGED)</div>
+                <div style="color:var(--alert); font-weight:bold; text-align:center; font-size:0.75rem;">⚠️ DEVICE RE-IDENTIFIED</div>
                 <table class="rep-table">
                     <tr><th>Data</th><th>Previous</th><th>Current</th></tr>
                     <tr><td>Time</td><td id="old-time"></td><td id="new-time">Now</td></tr>
@@ -149,66 +158,50 @@
 
 <script>
     window.addEventListener('DOMContentLoaded', () => {
-        
-        // 1. SYSTEM INFO
+        // System Info
         const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         document.getElementById('os').innerText = navigator.platform;
         document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Cores";
         document.getElementById('ram').innerText = (navigator.deviceMemory || '?') + " GB";
-        document.getElementById('dnt').innerText = navigator.doNotTrack == "1" ? "Enabled" : "Disabled";
-
-        // --- AGGIORNAMENTO LINGUE E USER AGENT ---
-        // Recupera tutte le lingue, non solo la prima
+        
+        // Language & UA
         const langs = navigator.languages ? navigator.languages.join(', ') : navigator.language;
         document.getElementById('lang').innerText = langs;
-        
-        // User Agent grezzo
         document.getElementById('ua').innerText = navigator.userAgent;
 
-        // Browser Detection Semplice
+        // Browser Detection
         const ua = navigator.userAgent;
         let b = "Unknown";
-        if(ua.includes("OPR")||ua.includes("Opera")) b="Opera";
-        else if(ua.includes("Edg")) b="Edge";
-        else if(ua.includes("Chrome")) b="Chrome";
-        else if(ua.includes("Firefox")) b="Firefox";
-        else if(ua.includes("Safari")) b="Safari";
+        if(ua.includes("Chrome")) b="Chrome";
+        if(ua.includes("Firefox")) b="Firefox";
+        if(ua.includes("Safari") && !ua.includes("Chrome")) b="Safari";
+        if(ua.includes("Edg")) b="Edge";
+        if(ua.includes("OPR") || ua.includes("Opera")) b="Opera";
         document.getElementById('browser').innerText = b;
 
-        // Model
         document.getElementById('model').innerText = /Mobi/.test(ua) ? "Mobile Device" : "Desktop PC";
 
-        // GPU
+        // GPU & Battery
         try {
             const gl = document.createElement('canvas').getContext('webgl');
             const dbg = gl.getExtension('WEBGL_debug_renderer_info');
             document.getElementById('gpu').innerText = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
         } catch(e){}
-
-        // Battery
         if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
 
-        // 2. PRIVACY CHECKS
-        setTimeout(() => {
-            if(document.getElementById('ad-test').clientHeight === 0) 
-                document.getElementById('adblock-warn').style.display = 'block';
-        }, 800);
-        
-        if('storage' in navigator && 'estimate' in navigator.storage) {
-            navigator.storage.estimate().then(est => {
-                if(est.quota < 120000000) document.getElementById('incognito-warn').style.display = 'block';
-            });
-        }
+        // Privacy Checks
+        setTimeout(() => { if(document.getElementById('ad-test').clientHeight === 0) document.getElementById('adblock-warn').style.display = 'block'; }, 800);
+        if('storage' in navigator && 'estimate' in navigator.storage) { navigator.storage.estimate().then(est => { if(est.quota < 120000000) document.getElementById('incognito-warn').style.display = 'block'; }); }
 
-        // 3. NETWORK SCAN
+        // Network Scan
         async function runNet() {
             try {
                 const res = await fetch('https://ipwho.is/');
                 const data = await res.json();
-                
                 if(data.success) {
                     document.getElementById('ip').innerText = data.ip;
-                    document.getElementById('isp').innerText = data.connection.isp;
+                    // Qui usiamo connection.org o connection.isp come proxy per il DNS Provider
+                    document.getElementById('isp').innerText = data.connection.org || data.connection.isp;
                     document.getElementById('geo').innerText = `${data.city}, ${data.country}`;
                     document.getElementById('ip-tz').innerText = data.timezone.id;
 
@@ -218,20 +211,14 @@
                         L.marker([data.latitude, data.longitude]).addTo(map).bindPopup("TARGET LOCKED").openPopup();
                     }
 
-                    if(data.timezone.id.split('/')[0] !== sysTz.split('/')[0]) {
-                        document.getElementById('vpn-warn').style.display = 'block';
-                    }
-
+                    if(data.timezone.id.split('/')[0] !== sysTz.split('/')[0]) document.getElementById('vpn-warn').style.display = 'block';
                     runForensics(data.ip);
                 }
-            } catch(e) {
-                document.getElementById('ip').innerText = "NETWORK ERROR";
-                runForensics("Unknown IP");
-            }
+            } catch(e) { document.getElementById('ip').innerText = "ERR"; runForensics("Unknown"); }
         }
         runNet();
 
-        // 4. FORENSICS
+        // Forensics
         function runForensics(currentIP) {
             setTimeout(() => {
                 const canvas = document.getElementById('canv');
@@ -257,36 +244,44 @@
                 } catch(e){}
 
                 function markFound(id) { const el=document.getElementById(id); el.innerText="✅ FOUND"; el.style.color="#00ff41"; el.style.fontWeight="bold"; }
-                
                 if(navigator.cookieEnabled) { document.cookie="z=1"; if(document.cookie.indexOf("z")!==-1) markFound('audit-cookie'); }
                 try { localStorage.setItem('z',1); markFound('audit-ls'); } catch(e){}
                 try { const r=indexedDB.open("z",1); r.onupgradeneeded=e=>e.target.result.createObjectStore("s"); r.onsuccess=e=>{markFound('audit-idb');e.target.result.close();}}catch(e){}
 
                 const history = JSON.parse(localStorage.getItem('xray_log') || 'null');
                 const now = new Date().toLocaleTimeString();
-
-                if (history && history.id === fp) {
-                    if (history.ip !== currentIP && currentIP !== "Unknown IP") {
-                        document.getElementById('forensic-report').style.display = 'block';
-                        document.getElementById('old-time').innerText = history.time;
-                        document.getElementById('old-ip').innerText = history.ip;
-                        document.getElementById('new-ip').innerText = currentIP;
-                    } else {
-                        document.getElementById('clean-msg').innerText = "Session Continuity (Same IP/ID).";
-                        document.getElementById('clean-msg').style.display = 'block';
-                    }
-                } else {
+                if (history && history.id === fp && history.ip !== currentIP && currentIP !== "Unknown") {
+                    document.getElementById('forensic-report').style.display = 'block';
+                    document.getElementById('old-time').innerText = history.time;
+                    document.getElementById('old-ip').innerText = history.ip;
+                    document.getElementById('new-ip').innerText = currentIP;
+                } else if(!history) {
                     document.getElementById('clean-msg').innerText = "New Device Profile Created.";
                     document.getElementById('clean-msg').style.display = 'block';
                 }
-
-                if (currentIP !== "Unknown IP") {
-                    localStorage.setItem('xray_log', JSON.stringify({ id: fp, ip: currentIP, time: now }));
-                }
-
+                if (currentIP !== "Unknown") localStorage.setItem('xray_log', JSON.stringify({ id: fp, ip: currentIP, time: now }));
             }, 500);
         }
     });
+
+    function showPaths() {
+        document.getElementById('disk-paths').style.display = 'block';
+        const ua = navigator.userAgent;
+        const isWin = navigator.platform.includes('Win');
+        let cPath = "~/.config/google-chrome/Default/Cookies";
+        let lsPath = "~/.config/google-chrome/Default/Local Storage";
+
+        if (isWin) {
+            cPath = "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\Network\\Cookies";
+            lsPath = "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\Local Storage";
+            if (ua.includes("Firefox")) {
+                cPath = "%APPDATA%\\Mozilla\\Firefox\\Profiles\\*.default\\cookies.sqlite";
+                lsPath = "%APPDATA%\\Mozilla\\Firefox\\Profiles\\*.default\\storage";
+            }
+        }
+        document.getElementById('path-cookie').innerText = cPath;
+        document.getElementById('path-ls').innerText = lsPath;
+    }
 </script>
 
 </body>
