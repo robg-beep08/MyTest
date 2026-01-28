@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital X-RAY | Deep Inspection</title>
+    <title>Digital X-RAY | Forensic Suite v14</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
@@ -21,15 +21,20 @@
         }
 
         body { font-family: 'Segoe UI', 'Courier New', monospace; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; overflow-x: hidden; }
-        .wrapper { max-width: 1400px; margin: auto; }
+        .wrapper { max-width: 1600px; margin: auto; } /* Allargato per ospitare più schede */
 
         /* HEADER */
         header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--neon); padding-bottom: 15px; }
         h1 { color: var(--neon); margin: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 2rem; text-shadow: 0 0 10px rgba(0, 255, 65, 0.3); }
         .subtitle { font-size: 0.9rem; letter-spacing: 2px; margin-top: 5px; color: #fff; animation: blink 2s infinite; }
 
-        /* GRIGLIA */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        /* GRIGLIA INTELLIGENTE */
+        .grid { 
+            display: grid; 
+            /* Crea colonne automatiche larghe almeno 350px. Se c'è spazio, ne mette 3 o 4 in fila. */
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
+            gap: 20px; 
+        }
         
         /* CARDS */
         .card { 
@@ -42,16 +47,21 @@
         .label { color: #888; font-weight: bold; }
         .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; }
         
+        /* Sezione User Agent Specifica */
+        .ua-box {
+            background: #000; border: 1px dashed #333; padding: 8px; margin-top: 10px;
+            font-size: 0.65rem; color: #aaa; font-family: 'Consolas', monospace; word-break: break-all;
+        }
+
         /* Mappa */
         #map { height: 180px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); }
 
-        /* NUOVA SEZIONE: STATUS INDICATORS (X / V) */
+        /* STATUS INDICATORS (X / V) per la sezione filtri */
         .status-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #222; font-size: 0.8rem; }
         .status-label { color: #aaa; }
         .status-icon { font-weight: bold; font-family: monospace; }
-        .not-detected { color: #555; } /* Grigio spento */
-        .detected { color: var(--alert); text-shadow: 0 0 5px var(--alert); } /* Rosso acceso */
-        
+        .not-detected { color: #444; } 
+        .detected { color: var(--alert); text-shadow: 0 0 5px var(--alert); }
         .section-title { color: var(--blue); font-size: 0.75rem; text-transform: uppercase; margin-top: 15px; margin-bottom: 5px; display: block; border-bottom: 1px dashed #333; }
 
         /* Badge Avvisi */
@@ -79,8 +89,8 @@
 
 <div class="wrapper">
     <header>
-        <h1>DIGITAL X-RAY v13.0</h1>
-        <div class="subtitle">>>> DEEP CONTENT INSPECTION <<<</div>
+        <h1>DIGITAL X-RAY v14.0</h1>
+        <div class="subtitle">>>> FULL SPECTRUM ANALYSIS <<<</div>
     </header>
     
     <div class="grid">
@@ -90,38 +100,48 @@
             <div class="row"><span class="label">Public IP:</span> <span id="ip" class="val" style="color:var(--neon)">SCANNING...</span></div>
             <div class="row"><span class="label">ISP / Org:</span> <span id="isp" class="val">...</span></div>
             <div class="row"><span class="label">Location:</span> <span id="geo" class="val">...</span></div>
-            <div id="vpn-warn" class="badge-warn">⚠️ VPN DETECTED</div>
+            <div class="row"><span class="label">Timezone (IP):</span> <span id="ip-tz" class="val">...</span></div>
+            <div id="vpn-warn" class="badge-warn">⚠️ VPN DETECTED (Region Mismatch)</div>
             <div id="map"></div>
         </div>
 
         <div class="card">
             <h2>📱 Hardware</h2>
-            <div class="row"><span class="label">OS:</span> <span id="os" class="val"></span></div>
-            <div class="row"><span class="label">CPU:</span> <span id="cpu" class="val"></span></div>
-            <div class="row"><span class="label">GPU:</span> <span id="gpu" class="val"></span></div>
-            <div class="row"><span class="label">RAM:</span> <span id="ram" class="val"></span></div>
+            <div class="row"><span class="label">Platform:</span> <span id="os" class="val"></span></div>
+            <div class="row"><span class="label">CPU Cores:</span> <span id="cpu" class="val"></span></div>
+            <div class="row"><span class="label">GPU Renderer:</span> <span id="gpu" class="val"></span></div>
+            <div class="row"><span class="label">RAM Memory:</span> <span id="ram" class="val"></span></div>
+            <div class="row"><span class="label">Screen Res:</span> <span id="screen" class="val"></span></div>
             <div class="row"><span class="label">Battery:</span> <span id="battery" class="val">N/A</span></div>
-            <div class="row"><span class="label">User Agent:</span> <span id="ua" class="val" style="font-size:0.6rem; text-align:left;"></span></div>
         </div>
 
         <div class="card" style="border-top-color: var(--warn);">
+            <h2>🕵️ Browser Identity</h2>
+            <div class="row"><span class="label">Browser:</span> <span id="browser" class="val"></span></div>
+            <div class="row"><span class="label">Languages:</span> <span id="lang" class="val" style="color:#fff;"></span></div>
+            <div class="row"><span class="label">Do Not Track:</span> <span id="dnt" class="val"></span></div>
+            <div class="row"><span class="label">System Time:</span> <span id="sys-tz" class="val"></span></div>
+            
+            <span class="label" style="margin-top:10px; display:block;">User Agent String:</span>
+            <div id="ua" class="ua-box">...</div>
+        </div>
+
+        <div class="card" style="border-top-color: #ff00ff;">
             <h2>🛡️ Filters & Proxy</h2>
             
-            <span class="section-title">Proxy Detection</span>
+            <span class="section-title">Proxy / Tor</span>
             <div class="status-row"><span class="status-label">HTTP Proxy Headers</span><span id="chk-proxy" class="status-icon not-detected">✖ NOT DETECTED</span></div>
             <div class="status-row"><span class="status-label">VPN / Tor IP</span><span id="chk-tor-ip" class="status-icon not-detected">✖ NOT DETECTED</span></div>
-
-            <span class="section-title">Tor Browser Detection</span>
-            <div class="status-row"><span class="status-label">Window Letterboxing</span><span id="chk-letterbox" class="status-icon not-detected">✖ NOT DETECTED</span></div>
-            <div class="status-row"><span class="status-label">Canvas Protection</span><span id="chk-canvas-prot" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">Tor Letterboxing</span><span id="chk-letterbox" class="status-icon not-detected">✖ NOT DETECTED</span></div>
 
             <span class="section-title">Content Filters</span>
             <div class="status-row"><span class="status-label">AdBlock / AdGuard</span><span id="chk-adblock" class="status-icon not-detected">✖ NOT DETECTED</span></div>
-            <div class="status-row"><span class="status-label">Dark Reader Extension</span><span id="chk-darkreader" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">Dark Reader Ext.</span><span id="chk-darkreader" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">Canvas Protection</span><span id="chk-canvas-prot" class="status-icon not-detected">✖ NOT DETECTED</span></div>
         </div>
 
         <div class="card" style="border-top-color: var(--alert);">
-            <h2>🧬 Forensics & Zombies</h2>
+            <h2>🧬 Forensics</h2>
             <div class="row"><span class="label">Canvas ID:</span> <span id="fp" class="val" style="color:var(--alert)">WAITING...</span></div>
             <div class="row"><span class="label">Audio ID:</span> <span id="audio-fp" class="val" style="color:var(--alert)">WAITING...</span></div>
 
@@ -144,6 +164,7 @@
                     <tr><td>IP</td><td id="old-ip"></td><td id="new-ip"></td></tr>
                 </table>
             </div>
+             <div id="clean-msg" style="margin-top:10px; font-size:0.75rem; text-align:center; color:#555; display:none;">No prior correlation found.</div>
         </div>
 
     </div>
@@ -156,10 +177,26 @@
     window.addEventListener('DOMContentLoaded', () => {
         // --- 1. INFO BASE ---
         const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        document.getElementById('sys-tz').innerText = sysTz;
         document.getElementById('os').innerText = navigator.platform;
         document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Cores";
         document.getElementById('ram').innerText = (navigator.deviceMemory || '?') + " GB";
+        document.getElementById('screen').innerText = `${screen.width}x${screen.height}`;
+        document.getElementById('dnt').innerText = navigator.doNotTrack == "1" ? "Enabled" : "Disabled";
+
+        // BROWSER IDENTITY (Completa)
+        const langs = navigator.languages ? navigator.languages.join(', ') : navigator.language;
+        document.getElementById('lang').innerText = langs;
         document.getElementById('ua').innerText = navigator.userAgent;
+
+        const ua = navigator.userAgent;
+        let b = "Unknown";
+        if(ua.includes("Chrome")) b="Chrome";
+        if(ua.includes("Firefox")) b="Firefox";
+        if(ua.includes("Safari") && !ua.includes("Chrome")) b="Safari";
+        if(ua.includes("Edg")) b="Edge";
+        if(ua.includes("OPR") || ua.includes("Opera")) b="Opera";
+        document.getElementById('browser').innerText = b;
 
         // GPU & Battery
         try {
@@ -169,36 +206,29 @@
         } catch(e){}
         if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
 
-        // --- 2. ADVANCED FILTER DETECTION ---
+        // --- 2. ADVANCED FILTERS & PROXY DETECTION ---
         
-        // A. AdBlock / AdGuard Detection
+        // AdBlock
         setTimeout(() => {
-            if(document.getElementById('ad-test').clientHeight === 0) {
-                setStatus('chk-adblock', true);
-            }
+            if(document.getElementById('ad-test').clientHeight === 0) setStatus('chk-adblock', true);
         }, 800);
 
-        // B. Dark Reader Detection (Cerca elementi iniettati nel DOM)
-        // Dark Reader aggiunge un meta tag specifico o classi style
+        // Dark Reader (Check DOM Injection)
         setTimeout(() => {
-            const meta = document.querySelector('meta[name="darkreader"]');
-            if(meta || document.querySelector('style.darkreader')) {
+            if(document.querySelector('meta[name="darkreader"]') || document.querySelector('style.darkreader')) {
                 setStatus('chk-darkreader', true);
             }
         }, 1000);
 
-        // C. Tor Letterboxing (Finestra ridimensionata per privacy)
-        // Se la finestra interna è significativamente più piccola dello schermo e ha misure "standardizzate"
+        // Tor Letterboxing
         const wDiff = window.outerWidth - window.innerWidth;
         const hDiff = window.outerHeight - window.innerHeight;
-        if(wDiff > 100 || hDiff > 100) {
-            setStatus('chk-letterbox', true); // Sospetto letterboxing
-        }
+        if(wDiff > 120 || hDiff > 120) setStatus('chk-letterbox', true);
 
-        // --- 3. NETWORK & PROXY SCAN ---
+        // --- 3. NETWORK SCAN ---
         async function runNet() {
             try {
-                // Usiamo ipwho.is che fornisce campi 'security'
+                // Usiamo ipwho.is per i dati di security
                 const res = await fetch('https://ipwho.is/');
                 const data = await res.json();
                 
@@ -206,23 +236,20 @@
                     document.getElementById('ip').innerText = data.ip;
                     document.getElementById('isp').innerText = data.connection.isp;
                     document.getElementById('geo').innerText = `${data.city}, ${data.country}`;
+                    document.getElementById('ip-tz').innerText = data.timezone.id;
 
-                    // Mappa
                     if(typeof L !== 'undefined') {
                         const map = L.map('map').setView([data.latitude, data.longitude], 13);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' }).addTo(map);
                         L.marker([data.latitude, data.longitude]).addTo(map).bindPopup("LOCKED").openPopup();
                     }
 
-                    // VPN / Proxy / Tor IP Detection (Dati forniti dall'API)
+                    // VPN / Proxy / Tor IP Detection
+                    if(data.timezone.id.split('/')[0] !== sysTz.split('/')[0]) document.getElementById('vpn-warn').style.display = 'block';
+                    
                     if(data.security.is_vpn || data.security.is_proxy || data.security.is_tor) {
                         setStatus('chk-tor-ip', true);
-                        document.getElementById('vpn-warn').style.display = 'block';
-                    }
-                    
-                    // Se l'API rileva un proxy, segniamo anche l'header (simulato per coerenza)
-                    if(data.security.is_proxy) {
-                         setStatus('chk-proxy', true);
+                        if(data.security.is_proxy) setStatus('chk-proxy', true);
                     }
 
                     runForensics(data.ip);
@@ -239,12 +266,10 @@
                 ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillStyle = "#f60"; ctx.fillRect(125,1,62,20);
                 ctx.fillStyle = "#069"; ctx.fillText("X-RAY", 2, 15);
                 
-                // Controllo Canvas Protection (Se il browser mente o blocca la lettura)
+                // Canvas Protection Check
                 try {
                     let b64 = canvas.toDataURL();
-                    // Se Tor blocca il canvas, spesso restituisce un'immagine bianca o vuota
-                    // Questo è un check semplificato
-                    if(b64.length < 100) setStatus('chk-canvas-prot', true);
+                    if(b64.length < 50) setStatus('chk-canvas-prot', true); // Se Tor restituisce vuoto
                     
                     let bin = atob(b64.replace("data:image/png;base64,",""));
                     let crc = -1;
@@ -254,10 +279,9 @@
                     document.getElementById('fp').innerText = fp;
                 } catch(e) {
                     document.getElementById('fp').innerText = "BLOCKED";
-                    setStatus('chk-canvas-prot', true); // Protezione rilevata!
+                    setStatus('chk-canvas-prot', true);
                 }
 
-                // Audio ID
                 try {
                     const ac = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100);
                     const osc = ac.createOscillator(); osc.type='triangle'; osc.frequency.setValueAtTime(10000, ac.currentTime);
@@ -268,13 +292,11 @@
                     });
                 } catch(e){}
 
-                // Zombie Check
                 function markFound(id) { const el=document.getElementById(id); el.innerText="✅ FOUND"; el.style.color="#00ff41"; el.style.fontWeight="bold"; }
                 if(navigator.cookieEnabled) { document.cookie="z=1"; if(document.cookie.indexOf("z")!==-1) markFound('audit-cookie'); }
                 try { localStorage.setItem('z',1); markFound('audit-ls'); } catch(e){}
                 try { const r=indexedDB.open("z",1); r.onupgradeneeded=e=>e.target.result.createObjectStore("s"); r.onsuccess=e=>{markFound('audit-idb');e.target.result.close();}}catch(e){}
 
-                // Match Report
                 const history = JSON.parse(localStorage.getItem('xray_log') || 'null');
                 const now = new Date().toLocaleTimeString();
                 if (history && history.id === document.getElementById('fp').innerText && history.ip !== currentIP && currentIP !== "Unknown") {
@@ -282,23 +304,25 @@
                     document.getElementById('old-time').innerText = history.time;
                     document.getElementById('old-ip').innerText = history.ip;
                     document.getElementById('new-ip').innerText = currentIP;
+                } else if(!history) {
+                    document.getElementById('clean-msg').style.display = 'block';
                 }
                 if (currentIP !== "Unknown") localStorage.setItem('xray_log', JSON.stringify({ id: document.getElementById('fp').innerText, ip: currentIP, time: now }));
             }, 500);
         }
-    });
 
-    // Helper per settare lo status (Rosso/Grigio)
-    function setStatus(id, detected) {
-        const el = document.getElementById(id);
-        if(detected) {
-            el.innerText = "✔ DETECTED";
-            el.className = "status-icon detected";
-        } else {
-            el.innerText = "✖ NOT DETECTED";
-            el.className = "status-icon not-detected";
+        // Helper Status
+        function setStatus(id, detected) {
+            const el = document.getElementById(id);
+            if(detected) {
+                el.innerText = "✔ DETECTED";
+                el.className = "status-icon detected";
+            } else {
+                el.innerText = "✖ NOT DETECTED";
+                el.className = "status-icon not-detected";
+            }
         }
-    }
+    });
 
     function showPaths() {
         document.getElementById('disk-paths').style.display = 'block';
