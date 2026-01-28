@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Digital X-RAY | Advanced Digital Fingerprinting</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
     
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
     <style>
         :root { --neon: #00ff41; --alert: #ff3e3e; --bg: #0a0c10; --card: #1c2128; --blue: #58a6ff; }
         body { font-family: 'Segoe UI', 'Courier New', monospace; background: var(--bg); color: #adbac7; margin: 0; padding: 20px; overflow-x: hidden; }
@@ -23,15 +25,14 @@
         .critical { color: var(--alert); font-weight: bold; text-transform: uppercase; animation: flash 1s infinite; }
         @keyframes flash { 50% { opacity: 0.3; } }
 
-        /* 2. STILE PER LA MAPPA AGGIUNTO */
+        /* 2. AGGIUNTA: Stile Mappa "Hacker Mode" */
         #map { 
             height: 250px; 
             width: 100%; 
             margin-top: 15px; 
-            border: 1px solid var(--neon); 
-            border-radius: 4px;
-            /* Filtro per renderla "Dark Mode" come il resto del sito */
-            filter: grayscale(100%) invert(100%);
+            border: 1px solid var(--neon);
+            /* Inverte i colori per renderla scura/dark mode */
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
     </style>
 </head>
@@ -53,219 +54,4 @@
                 <div id="map"></div>
             </div>
 
-            <div class="card">
-                <h2>📱 Device & Hardware Forensics</h2>
-                <div class="row"><span class="label">Device Brand/Model:</span> <span id="model" class="val" style="color:white;">DETECTING...</span></div>
-                <div class="row"><span class="label">OS Platform:</span> <span id="os" class="val"></span></div>
-                <div class="row"><span class="label">CPU Architecture:</span> <span id="cpu" class="val"></span></div>
-                <div class="row"><span class="label">GPU Renderer:</span> <span id="gpu" class="val"></span></div>
-                <div class="row"><span class="label">RAM Capacity:</span> <span id="ram" class="val"></span></div>
-                <div class="row"><span class="label">Battery Life:</span> <span id="battery" class="val">N/A</span></div>
-                <div class="row"><span class="label">Screen Resolution:</span> <span id="screen" class="val"></span></div>
-            </div>
-        </div>
-
-        <div class="col">
-            <div class="card" style="margin-bottom: 20px;">
-                <h2>🌐 Browser Environment</h2>
-                <div class="row"><span class="label">Identity:</span> <span id="browser" class="val"></span></div>
-                <div class="row"><span class="label">Preferred Languages:</span> <span id="lang" class="val"></span></div>
-                <div class="row"><span class="label">Timezone:</span> <span id="tz" class="val"></span></div>
-                <div class="row"><span class="label">System Theme:</span> <span id="theme" class="val"></span></div>
-                <div class="row"><span class="label">Do Not Track (DNT):</span> <span id="dnt" class="val"></span></div>
-                <div class="row"><span class="label">Unique Fingerprint:</span> <span id="fp" class="val" style="font-size: 0.7rem;">CALCULATING...</span></div>
-            </div>
-
-            <div class="card">
-                <h2>🛰️ Live Metadata Interception</h2>
-                <div id="feed"></div>
-                <p id="persistence" style="font-size: 0.75rem; margin-top: 10px; color: var(--blue);"></p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<canvas id="canv" width="200" height="40" style="display:none;"></canvas>
-
-<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
-
-<script>
-    const feed = document.getElementById('feed');
-    const log = (msg, isCritical = false) => {
-        const time = new Date().toLocaleTimeString();
-        const cls = isCritical ? 'log-entry critical' : 'log-entry';
-        feed.innerHTML = `<div class="${cls}">[${time}] ${msg}</div>` + feed.innerHTML;
-    };
-
-    // 1. PERSISTENCE CHECK
-    let v = localStorage.getItem('osint_v') || 0;
-    v++; localStorage.setItem('osint_v', v);
-    document.getElementById('persistence').innerText = v > 1 ? `RECURRING TARGET: Visit #${v} detected via LocalStorage.` : "NEW TARGET: No previous local traces found.";
-    if(v > 1) log(`Target re-identified. Persistence Match #${v}.`, true);
-
-    // 2. ADVANCED DEVICE & BROWSER DETECTION
-    const ua = navigator.userAgent;
-    document.getElementById('os').innerText = navigator.platform;
-    document.getElementById('screen').innerText = `${screen.width}x${screen.height} (${screen.colorDepth}-bit)`;
-    document.getElementById('tz').innerText = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    document.getElementById('lang').innerText = navigator.languages.join(', ');
-    document.getElementById('dnt').innerText = navigator.doNotTrack === "1" ? "ENABLED" : "DISABLED";
-
-    // Precise Browser Logic
-    let b = "Unknown";
-    if (ua.includes("OPR") || ua.includes("Opera")) b = "Opera";
-    else if (ua.includes("Edg")) b = "MS Edge";
-    else if (ua.includes("Firefox")) b = "Firefox";
-    else if (ua.includes("Chrome")) b = "Chrome";
-    else if (ua.includes("Safari")) b = "Safari";
-    document.getElementById('browser').innerText = b;
-
-    // Advanced Device Model Detection
-    let modelName = "Unknown Mobile/PC";
-    if (/android/i.test(ua)) {
-        const match = ua.match(/Android\s+([^\s]+);(?:\s+([^;]+);)?\s+([^)]+)/);
-        modelName = match ? (match[3] || match[2] || "Android Device").split("Build")[0] : "Android Device";
-    } else if (/iPhone|iPad/.test(ua)) {
-        modelName = "Apple iOS Device";
-    }
-    document.getElementById('model').innerText = modelName;
-
-    // Client Hints API (High Entropy)
-    if (navigator.userAgentData?.getHighEntropyValues) {
-        navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion']).then(u => {
-            if(u.model) {
-                document.getElementById('model').innerText = u.model;
-                log(`CRITICAL: High-entropy hardware signature: ${u.model}`, true);
-            }
-        });
-    }
-
-    // 3. HARDWARE FORENSICS
-    document.getElementById('cpu').innerText = `${navigator.hardwareConcurrency || 'N/A'} logical cores`;
-    document.getElementById('ram').innerText = `~${navigator.deviceMemory || 'N/A'} GB`;
-    document.getElementById('theme').innerText = window.matchMedia('(prefers-color-scheme: dark)').matches ? "Dark Mode" : "Light Mode";
-
-    // GPU
-    const gl = document.createElement('canvas').getContext('webgl');
-    if (gl) {
-        const debug = gl.getExtension('WEBGL_debug_renderer_info');
-        document.getElementById('gpu').innerText = debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : "Generic";
-    }
-
-    // Battery
-    if (navigator.getBattery) {
-        navigator.getBattery().then(bt => {
-            const up = () => document.getElementById('battery').innerText = `${Math.round(bt.level * 100)}% (${bt.charging ? 'Charging' : 'Unplugged'})`;
-            up(); bt.onlevelchange = up;
-        });
-    }
-
-    // --- 4. MAP RENDERING LOGIC (NEW) ---
-    let mapInitialized = false;
-    function renderMap(lat, lon, label) {
-        if(mapInitialized) return; // Evita di reinizializzare se cambiamo fonte
-        
-        const map = L.map('map').setView([lat, lon], 13);
-        
-        // Tile Layer OpenStreetMap
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        // Marker con Popup
-        L.marker([lat, lon]).addTo(map)
-            .bindPopup(`<b>TARGET DETECTED</b><br>${label}`)
-            .openPopup();
-        
-        mapInitialized = true;
-        log(`GPS Triangulation successful: ${lat}, ${lon}`);
-    }
-
-    // --- 5. ADVANCED MULTI-SOURCE NETWORK PROBE (MODIFIED FOR COORDINATES) ---
-    const networkSources = [
-        {
-            url: 'https://ipwho.is/',
-            map: (d) => {
-                if (!d.success) throw new Error("API Limit"); 
-                // Aggiunto lat/lon
-                return { ip: d.ip, geo: `${d.city}, ${d.country}`, isp: d.connection.isp || d.connection.org, lat: d.latitude, lon: d.longitude };
-            }
-        },
-        {
-            url: 'https://freeipapi.com/api/json',
-            map: (d) => ({ ip: d.ipAddress, geo: `${d.cityName}, ${d.countryName}`, isp: d.asName, lat: d.latitude, lon: d.longitude })
-        },
-        {
-            url: 'https://ipapi.co/json/',
-            map: (d) => ({ ip: d.ip, geo: `${d.city}, ${d.country_name}`, isp: d.org, lat: d.latitude, lon: d.longitude })
-        }
-    ];
-
-    async function probeNetwork(index = 0) {
-        if (index >= networkSources.length) {
-            log("CRITICAL: All network APIs failed. Target might be using a high-security VPN or Proxy.", true);
-            document.getElementById('map').innerHTML = "<div style='color:red; text-align:center; padding-top:100px;'>GEOLOCATION FAILED</div>";
-            return;
-        }
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
-
-        try {
-            log(`Probing network source #${index + 1}...`);
-            const response = await fetch(networkSources[index].url, { signal: controller.signal });
-            
-            if (!response.ok) throw new Error("Connection error");
-            
-            const rawData = await response.json();
-            const data = networkSources[index].map(rawData);
-
-            // Update UI
-            document.getElementById('ip').innerText = data.ip;
-            document.getElementById('geo').innerText = data.geo;
-            document.getElementById('isp').innerText = data.isp;
-            
-            // --- ATTIVA MAPPA SE ABBIAMO COORDINATE ---
-            if(data.lat && data.lon) {
-                renderMap(data.lat, data.lon, data.geo);
-            }
-            
-            log(`Network Identity intercepted via Source #${index + 1}: ${data.ip}`);
-            clearTimeout(timeoutId);
-        } catch (err) {
-            clearTimeout(timeoutId);
-            log(`Source #${index + 1} failed or timed out. Trying next...`);
-            probeNetwork(index + 1); 
-        }
-    }
-
-    // Avvio automatico al caricamento
-    probeNetwork();
-
-    // Gestione Connection Type
-    const n = navigator.connection;
-    if (n) document.getElementById('conn-type').innerText = `${n.effectiveType.toUpperCase()} (Downlink: ${n.downlink}Mbps)`;
-
-    // 6. WEBRTC LEAK
-    const pc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
-    pc.createDataChannel("");
-    pc.onicecandidate = e => {
-        if (!e.candidate) return;
-        const res = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
-        if (res) {
-            document.getElementById('webrtc').innerText = res[1];
-            log(`SECURITY BREACH: Local IP leaked: ${res[1]}`, true);
-        }
-    };
-    pc.createOffer().then(s => pc.setLocalDescription(s));
-
-    // 7. FINGERPRINTING
-    const c = document.getElementById('canv');
-    const ct = c.getContext('2d');
-    ct.fillText("OSINT-ANALYSER-PRO", 2, 10);
-    let h = 0, str = c.toDataURL();
-    for(let i=0; i<str.length; i++) h = ((h << 5) - h) + str.charCodeAt(i);
-    document.getElementById('fp').innerText = `ID-${Math.abs(h)}`;
-
-    // 8. BEHAVIORAL LOGS
-    window
+            <div class
