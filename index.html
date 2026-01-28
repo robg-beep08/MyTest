@@ -3,37 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital X-RAY | Advanced Digital Fingerprinting</title>
+    <title>Digital X-RAY | Forensic Anonymity Analysis</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
     <style>
-        :root { --neon: #00ff41; --alert: #ff3e3e; --bg: #0a0c10; --card: #1c2128; --blue: #58a6ff; }
+        :root { --neon: #00ff41; --alert: #ff3e3e; --warn: #ffca28; --bg: #0a0c10; --card: #1c2128; --blue: #58a6ff; }
         body { font-family: 'Segoe UI', 'Courier New', monospace; background: var(--bg); color: #adbac7; margin: 0; padding: 20px; overflow-x: hidden; }
         .wrapper { max-width: 1100px; margin: auto; }
         h1 { color: var(--neon); text-align: center; text-transform: uppercase; letter-spacing: 4px; border-bottom: 2px solid var(--neon); padding-bottom: 10px; }
+        
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
-        .card { background: var(--card); border: 1px solid #444c56; border-radius: 6px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        .card { background: var(--card); border: 1px solid #444c56; border-radius: 6px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden;}
         h2 { color: var(--neon); font-size: 1.2rem; border-bottom: 1px solid #444c56; padding-bottom: 10px; margin-top: 0; }
+        
         .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2d333b; font-size: 0.85rem; }
         .label { color: #768390; font-weight: bold; }
         .val { color: var(--neon); font-weight: bold; text-align: right; word-break: break-all; max-width: 60%; }
-        #feed { height: 400px; overflow-y: auto; background: #000; border: 1px solid var(--neon); padding: 10px; font-size: 0.8rem; font-family: monospace; color: var(--blue); }
+        
+        /* Stile Log */
+        #feed { height: 300px; overflow-y: auto; background: #000; border: 1px solid var(--neon); padding: 10px; font-size: 0.8rem; font-family: monospace; color: var(--blue); }
         .log-entry { margin-bottom: 5px; border-left: 2px solid var(--blue); padding-left: 8px; }
         .critical { color: var(--alert); font-weight: bold; text-transform: uppercase; animation: flash 1s infinite; }
-        @keyframes flash { 50% { opacity: 0.3; } }
-
-        /* 2. AGGIUNTA: Stile Mappa "Hacker Mode" */
+        
+        /* Mappa Stile Hacker */
         #map { 
-            height: 250px; 
-            width: 100%; 
-            margin-top: 15px; 
-            border: 1px solid var(--neon);
-            /* Inverte i colori per renderla scura/dark mode */
+            height: 250px; width: 100%; margin-top: 15px; border: 1px solid var(--neon);
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
+
+        /* Nuova Sezione Privacy Score */
+        .security-badge {
+            background: rgba(255,0,0,0.1); border: 1px solid var(--alert); 
+            color: var(--alert); padding: 5px; text-align: center; font-weight: bold;
+            margin-top: 5px; display: none; /* Nascosto di default */
+        }
+        
+        @keyframes flash { 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
@@ -49,8 +58,10 @@
                 <div class="row"><span class="label">ISP / Carrier:</span> <span id="isp" class="val" style="color: #ffca28;">PROBING...</span></div>
                 <div class="row"><span class="label">Location:</span> <span id="geo" class="val">GEOLOCATING...</span></div>
                 <div class="row" style="background: rgba(255,0,0,0.1);"><span class="label" style="color:var(--alert)">WebRTC Leak (Internal IP):</span> <span id="webrtc" class="val">TESTING...</span></div>
-                <div class="row"><span class="label">Connection Tech:</span> <span id="conn-type" class="val">N/A</span></div>
                 
+                <div id="vpn-warn" class="security-badge">⚠️ POSSIBLE VPN DETECTED (Timezone Mismatch)</div>
+                <div id="tor-warn" class="security-badge">⚠️ TOR NETWORK DETECTED</div>
+
                 <div id="map"></div>
             </div>
 
@@ -58,23 +69,25 @@
                 <h2>📱 Device & Hardware Forensics</h2>
                 <div class="row"><span class="label">Device Brand/Model:</span> <span id="model" class="val" style="color:white;">DETECTING...</span></div>
                 <div class="row"><span class="label">OS Platform:</span> <span id="os" class="val"></span></div>
-                <div class="row"><span class="label">CPU Architecture:</span> <span id="cpu" class="val"></span></div>
+                <div class="row"><span class="label">CPU Cores:</span> <span id="cpu" class="val"></span></div>
                 <div class="row"><span class="label">GPU Renderer:</span> <span id="gpu" class="val"></span></div>
-                <div class="row"><span class="label">RAM Capacity:</span> <span id="ram" class="val"></span></div>
-                <div class="row"><span class="label">Battery Life:</span> <span id="battery" class="val">N/A</span></div>
-                <div class="row"><span class="label">Screen Resolution:</span> <span id="screen" class="val"></span></div>
+                <div class="row"><span class="label">RAM:</span> <span id="ram" class="val"></span></div>
+                <div class="row"><span class="label">Battery:</span> <span id="battery" class="val">N/A</span></div>
+                <div class="row"><span class="label">Screen:</span> <span id="screen" class="val"></span></div>
             </div>
         </div>
 
         <div class="col">
             <div class="card" style="margin-bottom: 20px;">
                 <h2>🌐 Browser Environment</h2>
-                <div class="row"><span class="label">Identity:</span> <span id="browser" class="val"></span></div>
-                <div class="row"><span class="label">Preferred Languages:</span> <span id="lang" class="val"></span></div>
-                <div class="row"><span class="label">Timezone:</span> <span id="tz" class="val"></span></div>
-                <div class="row"><span class="label">System Theme:</span> <span id="theme" class="val"></span></div>
-                <div class="row"><span class="label">Do Not Track (DNT):</span> <span id="dnt" class="val"></span></div>
-                <div class="row"><span class="label">Unique Fingerprint:</span> <span id="fp" class="val" style="font-size: 0.7rem;">CALCULATING...</span></div>
+                <div class="row"><span class="label">Browser Identity:</span> <span id="browser" class="val"></span></div>
+                <div class="row"><span class="label">System Timezone:</span> <span id="sys-tz" class="val"></span></div>
+                <div class="row"><span class="label">Language:</span> <span id="lang" class="val"></span></div>
+                <div class="row"><span class="label">Do Not Track:</span> <span id="dnt" class="val"></span></div>
+                <div class="row"><span class="label">Canvas Fingerprint:</span> <span id="fp" class="val" style="font-size: 0.7rem;">CALCULATING...</span></div>
+                
+                <div id="incognito-warn" class="security-badge">🕵️ PRIVATE/INCOGNITO MODE DETECTED</div>
+                <div id="adblock-warn" class="security-badge">🚫 AD-BLOCKER ACTIVE</div>
             </div>
 
             <div class="card">
@@ -87,6 +100,7 @@
 </div>
 
 <canvas id="canv" width="200" height="40" style="display:none;"></canvas>
+<div id="ad-test" class="ads ad-banner" style="position:absolute; top:-999px; left:-999px; width:1px; height:1px;"></div>
 
 <script>
     const feed = document.getElementById('feed');
@@ -96,21 +110,25 @@
         feed.innerHTML = `<div class="${cls}">[${time}] ${msg}</div>` + feed.innerHTML;
     };
 
-    // 1. PERSISTENCE CHECK
+    // 1. PERSISTENCE CHECK (Sei già stato qui?)
     let v = localStorage.getItem('osint_v') || 0;
     v++; localStorage.setItem('osint_v', v);
     document.getElementById('persistence').innerText = v > 1 ? `RECURRING TARGET: Visit #${v} detected via LocalStorage.` : "NEW TARGET: No previous local traces found.";
     if(v > 1) log(`Target re-identified. Persistence Match #${v}.`, true);
 
-    // 2. ADVANCED DEVICE & BROWSER DETECTION (TUTTO ORIGINALE)
+    // 2. DEVICE & BROWSER BASE
     const ua = navigator.userAgent;
     document.getElementById('os').innerText = navigator.platform;
     document.getElementById('screen').innerText = `${screen.width}x${screen.height} (${screen.colorDepth}-bit)`;
-    document.getElementById('tz').innerText = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    document.getElementById('lang').innerText = navigator.languages.join(', ');
+    
+    // Timezone di Sistema
+    const sysTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.getElementById('sys-tz').innerText = sysTimezone;
+    
+    document.getElementById('lang').innerText = navigator.languages ? navigator.languages.join(', ') : navigator.language;
     document.getElementById('dnt').innerText = navigator.doNotTrack === "1" ? "ENABLED" : "DISABLED";
 
-    // Precise Browser Logic (Opera inclusa!)
+    // Browser Detection (inclusa Opera)
     let b = "Unknown";
     if (ua.includes("OPR") || ua.includes("Opera")) b = "Opera";
     else if (ua.includes("Edg")) b = "MS Edge";
@@ -119,8 +137,8 @@
     else if (ua.includes("Safari")) b = "Safari";
     document.getElementById('browser').innerText = b;
 
-    // Advanced Device Model Detection
-    let modelName = "Unknown Mobile/PC";
+    // Mobile Detection
+    let modelName = "Desktop PC";
     if (/android/i.test(ua)) {
         const match = ua.match(/Android\s+([^\s]+);(?:\s+([^;]+);)?\s+([^)]+)/);
         modelName = match ? (match[3] || match[2] || "Android Device").split("Build")[0] : "Android Device";
@@ -129,20 +147,9 @@
     }
     document.getElementById('model').innerText = modelName;
 
-    // Client Hints API (High Entropy)
-    if (navigator.userAgentData?.getHighEntropyValues) {
-        navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion']).then(u => {
-            if(u.model) {
-                document.getElementById('model').innerText = u.model;
-                log(`CRITICAL: High-entropy hardware signature: ${u.model}`, true);
-            }
-        });
-    }
-
     // 3. HARDWARE FORENSICS
-    document.getElementById('cpu').innerText = `${navigator.hardwareConcurrency || 'N/A'} logical cores`;
+    document.getElementById('cpu').innerText = `${navigator.hardwareConcurrency || 'N/A'} cores`;
     document.getElementById('ram').innerText = `~${navigator.deviceMemory || 'N/A'} GB`;
-    document.getElementById('theme').innerText = window.matchMedia('(prefers-color-scheme: dark)').matches ? "Dark Mode" : "Light Mode";
 
     // GPU
     const gl = document.createElement('canvas').getContext('webgl');
@@ -159,78 +166,104 @@
         });
     }
 
-   // --- 4. ADVANCED MULTI-SOURCE NETWORK PROBE (WITH MAP INTEGRATION) ---
-   const networkSources = [
-    {
-        url: 'https://ipwho.is/',
-        map: (d) => {
-            if (!d.success) throw new Error("API Limit"); 
-            // 4a. Aggiunto recupero coordinate (lat, lon)
-            return { ip: d.ip, geo: `${d.city}, ${d.country}`, isp: d.connection.isp || d.connection.org, lat: d.latitude, lon: d.longitude };
+    // --- 4. ANALISI PRIVACY AVANZATA (SPECTACULAR FEATURES) ---
+
+    // A. Rilevamento AdBlock
+    setTimeout(() => {
+        const ad = document.getElementById('ad-test');
+        if (ad.clientHeight === 0) {
+            document.getElementById('adblock-warn').style.display = 'block';
+            log("AdBlocker detected active on client.", true);
         }
-    },
-    {
-        url: 'https://freeipapi.com/api/json',
-        map: (d) => ({ ip: d.ipAddress, geo: `${d.cityName}, ${d.countryName}`, isp: d.asName, lat: d.latitude, lon: d.longitude })
-    },
-    {
-        url: 'https://ipapi.co/json/',
-        map: (d) => ({ ip: d.ip, geo: `${d.city}, ${d.country_name}`, isp: d.org, lat: d.latitude, lon: d.longitude })
-    }
-];
+    }, 500);
 
-async function probeNetwork(index = 0) {
-    if (index >= networkSources.length) {
-        log("CRITICAL: All network APIs failed. Target might be using a high-security VPN or Proxy.", true);
-        return;
+    // B. Rilevamento Incognito (Metodo Quota Storage - Funziona su Chrome/Edge moderni)
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+        navigator.storage.estimate().then(estimate => {
+            // Se la quota è molto bassa (< 120MB), spesso indica modalità incognito
+            if (estimate.quota < 120000000) {
+                document.getElementById('incognito-warn').style.display = 'block';
+                log("Heuristic analysis indicates Private/Incognito mode.", true);
+            }
+        });
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    // --- 5. NETWORK SCAN & VPN HUNTER ---
+    const networkSources = [
+        {
+            url: 'https://ipwho.is/',
+            map: (d) => {
+                if (!d.success) throw new Error("API Limit");
+                return { 
+                    ip: d.ip, 
+                    geo: `${d.city}, ${d.country}`, 
+                    isp: d.connection.isp, 
+                    lat: d.latitude, 
+                    lon: d.longitude,
+                    timezone: d.timezone.id // Fuso orario dell'IP
+                };
+            }
+        },
+        {
+            url: 'https://ipapi.co/json/',
+            map: (d) => ({ 
+                ip: d.ip, 
+                geo: `${d.city}, ${d.country_name}`, 
+                isp: d.org, 
+                lat: d.latitude, 
+                lon: d.longitude,
+                timezone: d.timezone 
+            })
+        }
+    ];
 
-    try {
-        log(`Probing network source #${index + 1}...`);
-        const response = await fetch(networkSources[index].url, { signal: controller.signal });
-        
-        if (!response.ok) throw new Error("Connection error");
-        
-        const rawData = await response.json();
-        const data = networkSources[index].map(rawData);
-
-        // Update UI
-        document.getElementById('ip').innerText = data.ip;
-        document.getElementById('geo').innerText = data.geo;
-        document.getElementById('isp').innerText = data.isp;
-        
-        // 4b. DISEGNO MAPPA (Se abbiamo coordinate)
-        if(data.lat && data.lon && typeof L !== 'undefined') {
-            const map = L.map('map').setView([data.lat, data.lon], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
-            L.marker([data.lat, data.lon]).addTo(map)
-                .bindPopup(`<b>TARGET LOCKED</b><br>${data.geo}`)
-                .openPopup();
-            log(`GPS Triangulation successful: ${data.lat}, ${data.lon}`);
+    async function probeNetwork(index = 0) {
+        if (index >= networkSources.length) {
+            log("CRITICAL: Network probes blocked. VPN likely active.", true);
+            return;
         }
 
-        log(`Network Identity intercepted via Source #${index + 1}: ${data.ip}`);
-        clearTimeout(timeoutId);
-    } catch (err) {
-        clearTimeout(timeoutId);
-        log(`Source #${index + 1} failed or timed out. Trying next...`);
-        probeNetwork(index + 1); 
+        try {
+            log(`Probing network source #${index + 1}...`);
+            const response = await fetch(networkSources[index].url);
+            if (!response.ok) throw new Error("Connection error");
+            
+            const rawData = await response.json();
+            const data = networkSources[index].map(rawData);
+
+            // UI Update
+            document.getElementById('ip').innerText = data.ip;
+            document.getElementById('geo').innerText = data.geo;
+            document.getElementById('isp').innerText = data.isp;
+
+            // --- C. VPN DETECTOR (Confronto Timezone) ---
+            // Se il fuso orario dell'IP è diverso da quello del sistema, è una VPN
+            if (data.timezone && data.timezone !== sysTimezone) {
+                document.getElementById('vpn-warn').style.display = 'block';
+                document.getElementById('vpn-warn').innerText = `⚠️ VPN DETECTED: System says ${sysTimezone}, IP says ${data.timezone}`;
+                log(`VPN LEAK: Timezone mismatch (${sysTimezone} vs ${data.timezone})`, true);
+            }
+
+            // Mappa
+            if(data.lat && data.lon && typeof L !== 'undefined') {
+                const map = L.map('map').setView([data.lat, data.lon], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                L.marker([data.lat, data.lon]).addTo(map)
+                    .bindPopup(`<b>TARGET LOCKED</b><br>${data.geo}`)
+                    .openPopup();
+            }
+
+            log(`Network Identity intercepted: ${data.ip}`);
+        } catch (err) {
+            log(`Source #${index + 1} failed. Switching...`);
+            probeNetwork(index + 1); 
+        }
     }
-}
+    probeNetwork();
 
-// Avvio automatico al caricamento
-probeNetwork();
-
-// Gestione Connection Type (Dati locali immediati)
-const n = navigator.connection;
-if (n) document.getElementById('conn-type').innerText = `${n.effectiveType.toUpperCase()} (Downlink: ${n.downlink}Mbps)`;
-
-    // 5. WEBRTC LEAK
+    // 6. WEBRTC LEAK
     const pc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
     pc.createDataChannel("");
     pc.onicecandidate = e => {
@@ -243,7 +276,7 @@ if (n) document.getElementById('conn-type').innerText = `${n.effectiveType.toUpp
     };
     pc.createOffer().then(s => pc.setLocalDescription(s));
 
-    // 6. FINGERPRINTING
+    // 7. FINGERPRINTING
     const c = document.getElementById('canv');
     const ct = c.getContext('2d');
     ct.fillText("OSINT-ANALYSER-PRO", 2, 10);
@@ -251,11 +284,11 @@ if (n) document.getElementById('conn-type').innerText = `${n.effectiveType.toUpp
     for(let i=0; i<str.length; i++) h = ((h << 5) - h) + str.charCodeAt(i);
     document.getElementById('fp').innerText = `ID-${Math.abs(h)}`;
 
-    // 7. BEHAVIORAL LOGS
+    // 8. LOG ATTIVITÀ
     window.onblur = () => log("WARNING: Target switched tab/window.", true);
     window.onfocus = () => log("Target returned to interface.");
-    window.onclick = () => log("Interaction: Mouse click recorded.");
-    log("System initialized. Monitoring digital footprint...");
+    log("System initialized. Scanning privacy vectors...");
+
 </script>
 
 </body>
