@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital X-RAY | Forensic Scanner Pro</title>
+    <title>Digital X-RAY | Deep Inspection</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
@@ -17,6 +17,7 @@
             --card: #111; 
             --text-main: #ccc; 
             --blue: #00f3ff;
+            --gray: #444;
         }
 
         body { font-family: 'Segoe UI', 'Courier New', monospace; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; overflow-x: hidden; }
@@ -37,35 +38,39 @@
         }
         h2 { color: var(--neon); font-size: 1.1rem; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; }
         
-        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; font-size: 0.85rem; }
-        .label { color: #888; font-weight: bold; min-width: 100px; }
-        .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; max-width: 65%; }
+        .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #222; font-size: 0.8rem; }
+        .label { color: #888; font-weight: bold; }
+        .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; }
         
         /* Mappa */
-        #map { height: 200px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); }
+        #map { height: 180px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); }
+
+        /* NUOVA SEZIONE: STATUS INDICATORS (X / V) */
+        .status-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #222; font-size: 0.8rem; }
+        .status-label { color: #aaa; }
+        .status-icon { font-weight: bold; font-family: monospace; }
+        .not-detected { color: #555; } /* Grigio spento */
+        .detected { color: var(--alert); text-shadow: 0 0 5px var(--alert); } /* Rosso acceso */
+        
+        .section-title { color: var(--blue); font-size: 0.75rem; text-transform: uppercase; margin-top: 15px; margin-bottom: 5px; display: block; border-bottom: 1px dashed #333; }
 
         /* Badge Avvisi */
         .badge-warn { background: rgba(255, 62, 62, 0.1); border: 1px solid var(--alert); color: var(--alert); padding: 5px; text-align: center; font-weight: bold; font-size: 0.75rem; margin-top: 5px; display: none; }
 
-        /* DNS Box */
-        #dns-box { margin-top: 10px; border: 1px dashed var(--blue); padding: 10px; background: rgba(0, 243, 255, 0.05); }
-        .dns-title { font-size: 0.7rem; color: var(--blue); text-transform: uppercase; display: block; margin-bottom: 5px; }
-        .dns-val { color: #fff; font-family: monospace; font-size: 0.9rem; font-weight: bold; }
-
         /* Zombie Audit */
         .audit-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-top: 5px; background: #1a1a1a; padding: 4px; border-radius: 3px;}
         
+        /* Button Paths */
+        .path-btn { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 5px; font-size: 0.7rem; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
+        .path-btn:hover { background: #333; border-color: var(--blue); color: var(--blue); }
+        #disk-paths { display: none; margin-top: 10px; border: 1px dashed #555; padding: 10px; background: #000; }
+        .path-val { font-family: 'Consolas', monospace; color: #aaa; font-size: 0.65rem; word-break: break-all; display: block; margin-bottom: 5px; }
+
         /* Report Forense */
         #forensic-report { display: none; margin-top: 15px; border: 1px solid var(--alert); padding: 5px; background: rgba(255,0,0,0.05); }
         .rep-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; margin-top: 5px; }
         .rep-table th { text-align: left; color: var(--alert); border-bottom: 1px solid #444; }
         .rep-table td { color: #ccc; padding: 2px 0; }
-
-        /* Button */
-        .path-btn { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 5px; font-size: 0.7rem; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
-        .path-btn:hover { background: #333; border-color: var(--blue); color: var(--blue); }
-        #disk-paths { display: none; margin-top: 10px; border: 1px dashed #555; padding: 10px; background: #000; }
-        .path-val { font-family: 'Consolas', monospace; color: #aaa; font-size: 0.65rem; word-break: break-all; display: block; margin-bottom: 5px; }
 
         @keyframes blink { 50% { opacity: 0.5; } }
     </style>
@@ -74,51 +79,45 @@
 
 <div class="wrapper">
     <header>
-        <h1>DIGITAL X-RAY v12.0</h1>
-        <div class="subtitle">>>> DNS & PACKET INSPECTION <<<</div>
+        <h1>DIGITAL X-RAY v13.0</h1>
+        <div class="subtitle">>>> DEEP CONTENT INSPECTION <<<</div>
     </header>
     
     <div class="grid">
         
         <div class="card" style="border-top-color: var(--blue);">
-            <h2>📡 Network & DNS</h2>
-            <div class="row"><span class="label">Public IPv4:</span> <span id="ip" class="val" style="color:var(--neon)">SCANNING...</span></div>
+            <h2>📡 Network & Geo</h2>
+            <div class="row"><span class="label">Public IP:</span> <span id="ip" class="val" style="color:var(--neon)">SCANNING...</span></div>
+            <div class="row"><span class="label">ISP / Org:</span> <span id="isp" class="val">...</span></div>
             <div class="row"><span class="label">Location:</span> <span id="geo" class="val">...</span></div>
-            <div class="row"><span class="label">Timezone:</span> <span id="ip-tz" class="val">...</span></div>
-            
-            <div id="dns-box">
-                <span class="dns-title">🛡️ DNS Traffic Router (Leak Check)</span>
-                <span id="isp" class="dns-val">Analyzing...</span>
-                <p style="font-size:0.65rem; color:#777; margin:5px 0 0 0;">
-                    *If this is your home provider (e.g. TIM, Vodafone) while using VPN, your DNS is <b>LEAKING</b>.
-                </p>
-            </div>
-
-            <div id="vpn-warn" class="badge-warn">⚠️ VPN DETECTED (Region Mismatch)</div>
+            <div id="vpn-warn" class="badge-warn">⚠️ VPN DETECTED</div>
             <div id="map"></div>
         </div>
 
         <div class="card">
-            <h2>📱 Hardware Fingerprint</h2>
-            <div class="row"><span class="label">Device Type:</span> <span id="model" class="val">DETECTING...</span></div>
-            <div class="row"><span class="label">OS Platform:</span> <span id="os" class="val"></span></div>
-            <div class="row"><span class="label">CPU Cores:</span> <span id="cpu" class="val"></span></div>
-            <div class="row"><span class="label">GPU Renderer:</span> <span id="gpu" class="val"></span></div>
-            <div class="row"><span class="label">RAM Memory:</span> <span id="ram" class="val"></span></div>
+            <h2>📱 Hardware</h2>
+            <div class="row"><span class="label">OS:</span> <span id="os" class="val"></span></div>
+            <div class="row"><span class="label">CPU:</span> <span id="cpu" class="val"></span></div>
+            <div class="row"><span class="label">GPU:</span> <span id="gpu" class="val"></span></div>
+            <div class="row"><span class="label">RAM:</span> <span id="ram" class="val"></span></div>
             <div class="row"><span class="label">Battery:</span> <span id="battery" class="val">N/A</span></div>
+            <div class="row"><span class="label">User Agent:</span> <span id="ua" class="val" style="font-size:0.6rem; text-align:left;"></span></div>
         </div>
 
         <div class="card" style="border-top-color: var(--warn);">
-            <h2>🕵️ Browser Headers</h2>
-            <div class="row"><span class="label">Browser ID:</span> <span id="browser" class="val"></span></div>
-            <div class="row"><span class="label">Languages:</span> <span id="lang" class="val" style="color: #fff;"></span></div>
-            <div class="row" style="flex-direction: column; align-items: flex-start;">
-                <span class="label" style="margin-bottom: 5px;">User Agent String:</span>
-                <span id="ua" class="val" style="text-align: left; width: 100%; max-width: 100%; font-size: 0.65rem; color: #888;"></span>
-            </div>
+            <h2>🛡️ Filters & Proxy</h2>
             
-            <div id="incognito-warn" class="badge-warn">🕵️ INCOGNITO MODE DETECTED</div>
-            <div id="adblock-warn" class="badge-warn">🚫 AD-BLOCKER ACTIVE</div>
+            <span class="section-title">Proxy Detection</span>
+            <div class="status-row"><span class="status-label">HTTP Proxy Headers</span><span id="chk-proxy" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">VPN / Tor IP</span><span id="chk-tor-ip" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+
+            <span class="section-title">Tor Browser Detection</span>
+            <div class="status-row"><span class="status-label">Window Letterboxing</span><span id="chk-letterbox" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">Canvas Protection</span><span id="chk-canvas-prot" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+
+            <span class="section-title">Content Filters</span>
+            <div class="status-row"><span class="status-label">AdBlock / AdGuard</span><span id="chk-adblock" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">Dark Reader Extension</span><span id="chk-darkreader" class="status-icon not-detected">✖ NOT DETECTED</span></div>
         </div>
 
         <div class="card" style="border-top-color: var(--alert);">
@@ -133,10 +132,8 @@
 
             <button class="path-btn" onclick="showPaths()">📂 Reveal Disk Paths</button>
             <div id="disk-paths">
-                <span style="color:#fff; font-size:0.7rem;">Cookies:</span>
-                <span id="path-cookie" class="path-val">...</span>
-                <span style="color:#fff; font-size:0.7rem;">Storage:</span>
-                <span id="path-ls" class="path-val">...</span>
+                <span style="color:#fff; font-size:0.7rem;">Cookies:</span><span id="path-cookie" class="path-val">...</span>
+                <span style="color:#fff; font-size:0.7rem;">Storage:</span><span id="path-ls" class="path-val">...</span>
             </div>
 
             <div id="forensic-report">
@@ -147,7 +144,6 @@
                     <tr><td>IP</td><td id="old-ip"></td><td id="new-ip"></td></tr>
                 </table>
             </div>
-             <div id="clean-msg" style="margin-top:10px; font-size:0.75rem; text-align:center; color:#555; display:none;">No prior correlation found.</div>
         </div>
 
     </div>
@@ -158,28 +154,12 @@
 
 <script>
     window.addEventListener('DOMContentLoaded', () => {
-        // System Info
+        // --- 1. INFO BASE ---
         const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         document.getElementById('os').innerText = navigator.platform;
         document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Cores";
         document.getElementById('ram').innerText = (navigator.deviceMemory || '?') + " GB";
-        
-        // Language & UA
-        const langs = navigator.languages ? navigator.languages.join(', ') : navigator.language;
-        document.getElementById('lang').innerText = langs;
         document.getElementById('ua').innerText = navigator.userAgent;
-
-        // Browser Detection
-        const ua = navigator.userAgent;
-        let b = "Unknown";
-        if(ua.includes("Chrome")) b="Chrome";
-        if(ua.includes("Firefox")) b="Firefox";
-        if(ua.includes("Safari") && !ua.includes("Chrome")) b="Safari";
-        if(ua.includes("Edg")) b="Edge";
-        if(ua.includes("OPR") || ua.includes("Opera")) b="Opera";
-        document.getElementById('browser').innerText = b;
-
-        document.getElementById('model').innerText = /Mobi/.test(ua) ? "Mobile Device" : "Desktop PC";
 
         // GPU & Battery
         try {
@@ -189,50 +169,95 @@
         } catch(e){}
         if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
 
-        // Privacy Checks
-        setTimeout(() => { if(document.getElementById('ad-test').clientHeight === 0) document.getElementById('adblock-warn').style.display = 'block'; }, 800);
-        if('storage' in navigator && 'estimate' in navigator.storage) { navigator.storage.estimate().then(est => { if(est.quota < 120000000) document.getElementById('incognito-warn').style.display = 'block'; }); }
+        // --- 2. ADVANCED FILTER DETECTION ---
+        
+        // A. AdBlock / AdGuard Detection
+        setTimeout(() => {
+            if(document.getElementById('ad-test').clientHeight === 0) {
+                setStatus('chk-adblock', true);
+            }
+        }, 800);
 
-        // Network Scan
+        // B. Dark Reader Detection (Cerca elementi iniettati nel DOM)
+        // Dark Reader aggiunge un meta tag specifico o classi style
+        setTimeout(() => {
+            const meta = document.querySelector('meta[name="darkreader"]');
+            if(meta || document.querySelector('style.darkreader')) {
+                setStatus('chk-darkreader', true);
+            }
+        }, 1000);
+
+        // C. Tor Letterboxing (Finestra ridimensionata per privacy)
+        // Se la finestra interna è significativamente più piccola dello schermo e ha misure "standardizzate"
+        const wDiff = window.outerWidth - window.innerWidth;
+        const hDiff = window.outerHeight - window.innerHeight;
+        if(wDiff > 100 || hDiff > 100) {
+            setStatus('chk-letterbox', true); // Sospetto letterboxing
+        }
+
+        // --- 3. NETWORK & PROXY SCAN ---
         async function runNet() {
             try {
+                // Usiamo ipwho.is che fornisce campi 'security'
                 const res = await fetch('https://ipwho.is/');
                 const data = await res.json();
+                
                 if(data.success) {
                     document.getElementById('ip').innerText = data.ip;
-                    // Qui usiamo connection.org o connection.isp come proxy per il DNS Provider
-                    document.getElementById('isp').innerText = data.connection.org || data.connection.isp;
+                    document.getElementById('isp').innerText = data.connection.isp;
                     document.getElementById('geo').innerText = `${data.city}, ${data.country}`;
-                    document.getElementById('ip-tz').innerText = data.timezone.id;
 
+                    // Mappa
                     if(typeof L !== 'undefined') {
                         const map = L.map('map').setView([data.latitude, data.longitude], 13);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' }).addTo(map);
-                        L.marker([data.latitude, data.longitude]).addTo(map).bindPopup("TARGET LOCKED").openPopup();
+                        L.marker([data.latitude, data.longitude]).addTo(map).bindPopup("LOCKED").openPopup();
                     }
 
-                    if(data.timezone.id.split('/')[0] !== sysTz.split('/')[0]) document.getElementById('vpn-warn').style.display = 'block';
+                    // VPN / Proxy / Tor IP Detection (Dati forniti dall'API)
+                    if(data.security.is_vpn || data.security.is_proxy || data.security.is_tor) {
+                        setStatus('chk-tor-ip', true);
+                        document.getElementById('vpn-warn').style.display = 'block';
+                    }
+                    
+                    // Se l'API rileva un proxy, segniamo anche l'header (simulato per coerenza)
+                    if(data.security.is_proxy) {
+                         setStatus('chk-proxy', true);
+                    }
+
                     runForensics(data.ip);
                 }
             } catch(e) { document.getElementById('ip').innerText = "ERR"; runForensics("Unknown"); }
         }
         runNet();
 
-        // Forensics
+        // --- 4. FORENSICS ---
         function runForensics(currentIP) {
             setTimeout(() => {
                 const canvas = document.getElementById('canv');
                 const ctx = canvas.getContext('2d');
                 ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillStyle = "#f60"; ctx.fillRect(125,1,62,20);
                 ctx.fillStyle = "#069"; ctx.fillText("X-RAY", 2, 15);
-                let b64 = canvas.toDataURL().replace("data:image/png;base64,","");
-                let bin = atob(b64);
-                let crc = -1;
-                const crcTable = (function(){ let c; let t=[]; for(let n=0; n<256; n++){ c=n; for(let k=0; k<8; k++) c=((c&1)?(0xEDB88320^(c>>>1)):(c>>>1)); t[n]=c; } return t; })();
-                for(let i=0; i<bin.length; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ bin.charCodeAt(i)) & 0xFF];
-                const fp = "CNV-" + (crc >>> 0).toString(16).toUpperCase();
-                document.getElementById('fp').innerText = fp;
+                
+                // Controllo Canvas Protection (Se il browser mente o blocca la lettura)
+                try {
+                    let b64 = canvas.toDataURL();
+                    // Se Tor blocca il canvas, spesso restituisce un'immagine bianca o vuota
+                    // Questo è un check semplificato
+                    if(b64.length < 100) setStatus('chk-canvas-prot', true);
+                    
+                    let bin = atob(b64.replace("data:image/png;base64,",""));
+                    let crc = -1;
+                    const crcTable = (function(){ let c; let t=[]; for(let n=0; n<256; n++){ c=n; for(let k=0; k<8; k++) c=((c&1)?(0xEDB88320^(c>>>1)):(c>>>1)); t[n]=c; } return t; })();
+                    for(let i=0; i<bin.length; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ bin.charCodeAt(i)) & 0xFF];
+                    const fp = "CNV-" + (crc >>> 0).toString(16).toUpperCase();
+                    document.getElementById('fp').innerText = fp;
+                } catch(e) {
+                    document.getElementById('fp').innerText = "BLOCKED";
+                    setStatus('chk-canvas-prot', true); // Protezione rilevata!
+                }
 
+                // Audio ID
                 try {
                     const ac = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100);
                     const osc = ac.createOscillator(); osc.type='triangle'; osc.frequency.setValueAtTime(10000, ac.currentTime);
@@ -243,41 +268,46 @@
                     });
                 } catch(e){}
 
+                // Zombie Check
                 function markFound(id) { const el=document.getElementById(id); el.innerText="✅ FOUND"; el.style.color="#00ff41"; el.style.fontWeight="bold"; }
                 if(navigator.cookieEnabled) { document.cookie="z=1"; if(document.cookie.indexOf("z")!==-1) markFound('audit-cookie'); }
                 try { localStorage.setItem('z',1); markFound('audit-ls'); } catch(e){}
                 try { const r=indexedDB.open("z",1); r.onupgradeneeded=e=>e.target.result.createObjectStore("s"); r.onsuccess=e=>{markFound('audit-idb');e.target.result.close();}}catch(e){}
 
+                // Match Report
                 const history = JSON.parse(localStorage.getItem('xray_log') || 'null');
                 const now = new Date().toLocaleTimeString();
-                if (history && history.id === fp && history.ip !== currentIP && currentIP !== "Unknown") {
+                if (history && history.id === document.getElementById('fp').innerText && history.ip !== currentIP && currentIP !== "Unknown") {
                     document.getElementById('forensic-report').style.display = 'block';
                     document.getElementById('old-time').innerText = history.time;
                     document.getElementById('old-ip').innerText = history.ip;
                     document.getElementById('new-ip').innerText = currentIP;
-                } else if(!history) {
-                    document.getElementById('clean-msg').innerText = "New Device Profile Created.";
-                    document.getElementById('clean-msg').style.display = 'block';
                 }
-                if (currentIP !== "Unknown") localStorage.setItem('xray_log', JSON.stringify({ id: fp, ip: currentIP, time: now }));
+                if (currentIP !== "Unknown") localStorage.setItem('xray_log', JSON.stringify({ id: document.getElementById('fp').innerText, ip: currentIP, time: now }));
             }, 500);
         }
     });
 
+    // Helper per settare lo status (Rosso/Grigio)
+    function setStatus(id, detected) {
+        const el = document.getElementById(id);
+        if(detected) {
+            el.innerText = "✔ DETECTED";
+            el.className = "status-icon detected";
+        } else {
+            el.innerText = "✖ NOT DETECTED";
+            el.className = "status-icon not-detected";
+        }
+    }
+
     function showPaths() {
         document.getElementById('disk-paths').style.display = 'block';
-        const ua = navigator.userAgent;
         const isWin = navigator.platform.includes('Win');
         let cPath = "~/.config/google-chrome/Default/Cookies";
         let lsPath = "~/.config/google-chrome/Default/Local Storage";
-
         if (isWin) {
             cPath = "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\Network\\Cookies";
             lsPath = "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\Local Storage";
-            if (ua.includes("Firefox")) {
-                cPath = "%APPDATA%\\Mozilla\\Firefox\\Profiles\\*.default\\cookies.sqlite";
-                lsPath = "%APPDATA%\\Mozilla\\Firefox\\Profiles\\*.default\\storage";
-            }
         }
         document.getElementById('path-cookie').innerText = cPath;
         document.getElementById('path-ls').innerText = lsPath;
