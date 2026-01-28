@@ -3,207 +3,269 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DIGITAL X-RAY | Advanced Forensic Scanner</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <title>Digital X-RAY | Advanced Digital Fingerprinting</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
+    
     <style>
-        :root {
-            --bg: #050505;
-            --card-bg: #111;
-            --neon-green: #00ff41;
-            --neon-red: #ff003c;
-            --neon-blue: #00f3ff;
-            --text-dim: #888;
-        }
-        body {
-            background-color: var(--bg);
-            color: #ccc;
-            font-family: 'Courier New', monospace;
-            margin: 0;
-            padding: 20px;
-            overflow-x: hidden;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        
-        /* HEADER */
-        header { border-bottom: 2px solid var(--neon-green); padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
-        h1 { margin: 0; color: var(--neon-green); text-transform: uppercase; letter-spacing: 4px; text-shadow: 0 0 10px rgba(0,255,65,0.5); }
-        .subtitle { font-size: 0.8rem; color: var(--neon-green); animation: blink 2s infinite; }
+        :root { --neon: #00ff41; --alert: #ff3e3e; --bg: #0a0c10; --card: #1c2128; --blue: #58a6ff; }
+        body { font-family: 'Segoe UI', 'Courier New', monospace; background: var(--bg); color: #adbac7; margin: 0; padding: 20px; overflow-x: hidden; }
+        .wrapper { max-width: 1100px; margin: auto; }
+        h1 { color: var(--neon); text-align: center; text-transform: uppercase; letter-spacing: 4px; border-bottom: 2px solid var(--neon); padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+        .card { background: var(--card); border: 1px solid #444c56; border-radius: 6px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { color: var(--neon); font-size: 1.2rem; border-bottom: 1px solid #444c56; padding-bottom: 10px; margin-top: 0; }
+        .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2d333b; font-size: 0.85rem; }
+        .label { color: #768390; font-weight: bold; }
+        .val { color: var(--neon); font-weight: bold; text-align: right; word-break: break-all; max-width: 60%; }
+        #feed { height: 400px; overflow-y: auto; background: #000; border: 1px solid var(--neon); padding: 10px; font-size: 0.8rem; font-family: monospace; color: var(--blue); }
+        .log-entry { margin-bottom: 5px; border-left: 2px solid var(--blue); padding-left: 8px; }
+        .critical { color: var(--alert); font-weight: bold; text-transform: uppercase; animation: flash 1s infinite; }
+        @keyframes flash { 50% { opacity: 0.3; } }
 
-        /* GRID LAYOUT */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
-        
-        /* CARDS */
-        .card {
-            background: var(--card-bg);
-            border: 1px solid #333;
-            border-left: 4px solid var(--neon-green);
-            padding: 15px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-            position: relative;
+        /* 2. STILE PER LA MAPPA AGGIUNTO */
+        #map { 
+            height: 250px; 
+            width: 100%; 
+            margin-top: 15px; 
+            border: 1px solid var(--neon); 
+            border-radius: 4px;
+            /* Filtro per renderla "Dark Mode" come il resto del sito */
+            filter: grayscale(100%) invert(100%);
         }
-        .card h2 { margin-top: 0; font-size: 1.1rem; color: #fff; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        .data-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; border-bottom: 1px solid #222; padding-bottom: 2px;}
-        .label { color: var(--text-dim); }
-        .value { color: var(--neon-blue); font-weight: bold; text-align: right; word-break: break-all; }
-        .highlight { color: var(--neon-green); }
-        .alert { color: var(--neon-red); }
-
-        /* TERMINAL LOG */
-        #terminal {
-            background: #000; border: 1px solid #333; height: 150px; overflow-y: auto; 
-            padding: 10px; font-size: 0.8rem; color: var(--neon-green); margin-bottom: 20px;
-            font-family: 'Consolas', monospace;
-        }
-        .log-line { margin: 2px 0; }
-        .log-warn { color: var(--neon-red); }
-
-        /* MAP */
-        #map { height: 300px; width: 100%; border: 1px solid var(--neon-green); filter: grayscale(100%) invert(100%); margin-top: 10px; }
-
-        /* PROBABILITY SCORE */
-        .score-box {
-            text-align: center; padding: 20px; border: 2px solid var(--neon-red); 
-            background: rgba(255, 0, 60, 0.1); margin-top: 20px;
-        }
-        .score-val { font-size: 3rem; font-weight: bold; color: var(--neon-red); display: block; }
-        .score-desc { font-size: 0.9rem; color: #fff; text-transform: uppercase; }
-
-        @keyframes blink { 50% { opacity: 0; } }
-        
-        /* HIDDEN CANVAS */
-        #fingerprint-canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <h1>Digital X-RAY v3.0</h1>
-        <div class="subtitle">SYSTEM STATUS: SURVEILLANCE ACTIVE</div>
-    </header>
-
-    <div id="terminal">
-        <div class="log-line">Initializing core modules...</div>
-    </div>
-
+<div class="wrapper">
+    <h1> X-RAY INTERFACE</h1>
+    
     <div class="grid">
-        <div class="card">
-            <h2>📡 Network Intelligence</h2>
-            <div class="data-row"><span class="label">Public IPv4:</span> <span id="ip" class="value">SCANNING...</span></div>
-            <div class="data-row"><span class="label">ISP / Org:</span> <span id="isp" class="value">...</span></div>
-            <div class="data-row"><span class="label">Connection Type:</span> <span id="conn" class="value">...</span></div>
-            <div class="data-row"><span class="label">Location:</span> <span id="geo" class="value">...</span></div>
-            <div class="data-row"><span class="label">WebRTC Leak:</span> <span id="webrtc" class="value alert">TESTING...</span></div>
-            <div id="map"></div>
+        <div class="col">
+            <div class="card" style="margin-bottom: 20px;">
+                <h2>📡 Network Intelligence</h2>
+                <div class="row"><span class="label">Public IPv4:</span> <span id="ip" class="val">CONNECTING...</span></div>
+                <div class="row"><span class="label">ISP / Carrier:</span> <span id="isp" class="val" style="color: #ffca28;">PROBING...</span></div>
+                <div class="row"><span class="label">Location:</span> <span id="geo" class="val">GEOLOCATING...</span></div>
+                <div class="row" style="background: rgba(255,0,0,0.1);"><span class="label" style="color:var(--alert)">WebRTC Leak (Internal IP):</span> <span id="webrtc" class="val">TESTING...</span></div>
+                <div class="row"><span class="label">Connection Tech:</span> <span id="conn-type" class="val">N/A</span></div>
+                
+                <div id="map"></div>
+            </div>
+
+            <div class="card">
+                <h2>📱 Device & Hardware Forensics</h2>
+                <div class="row"><span class="label">Device Brand/Model:</span> <span id="model" class="val" style="color:white;">DETECTING...</span></div>
+                <div class="row"><span class="label">OS Platform:</span> <span id="os" class="val"></span></div>
+                <div class="row"><span class="label">CPU Architecture:</span> <span id="cpu" class="val"></span></div>
+                <div class="row"><span class="label">GPU Renderer:</span> <span id="gpu" class="val"></span></div>
+                <div class="row"><span class="label">RAM Capacity:</span> <span id="ram" class="val"></span></div>
+                <div class="row"><span class="label">Battery Life:</span> <span id="battery" class="val">N/A</span></div>
+                <div class="row"><span class="label">Screen Resolution:</span> <span id="screen" class="val"></span></div>
+            </div>
         </div>
 
-        <div class="card">
-            <h2>📱 Hardware Forensics</h2>
-            <div class="data-row"><span class="label">OS / Platform:</span> <span id="os" class="value">...</span></div>
-            <div class="data-row"><span class="label">Browser Engine:</span> <span id="browser" class="value">...</span></div>
-            <div class="data-row"><span class="label">Screen Geometry:</span> <span id="screen" class="value">...</span></div>
-            <div class="data-row"><span class="label">CPU Cores:</span> <span id="cpu" class="value">...</span></div>
-            <div class="data-row"><span class="label">GPU Renderer:</span> <span id="gpu" class="value">...</span></div>
-            <div class="data-row"><span class="label">Battery Status:</span> <span id="battery" class="value">...</span></div>
-        </div>
+        <div class="col">
+            <div class="card" style="margin-bottom: 20px;">
+                <h2>🌐 Browser Environment</h2>
+                <div class="row"><span class="label">Identity:</span> <span id="browser" class="val"></span></div>
+                <div class="row"><span class="label">Preferred Languages:</span> <span id="lang" class="val"></span></div>
+                <div class="row"><span class="label">Timezone:</span> <span id="tz" class="val"></span></div>
+                <div class="row"><span class="label">System Theme:</span> <span id="theme" class="val"></span></div>
+                <div class="row"><span class="label">Do Not Track (DNT):</span> <span id="dnt" class="val"></span></div>
+                <div class="row"><span class="label">Unique Fingerprint:</span> <span id="fp" class="val" style="font-size: 0.7rem;">CALCULATING...</span></div>
+            </div>
 
-        <div class="card" style="border-left-color: var(--neon-blue);">
-            <h2>🧬 Unique Identifiers</h2>
-            <p style="font-size:0.75rem; color:#666; margin:0 0 10px 0;">Calculated from hardware imperfections.</p>
-            
-            <div class="data-row">
-                <span class="label">Canvas Hash:</span> 
-                <span id="canvas-fp" class="value" style="font-size:0.7rem">CALCULATING...</span>
-            </div>
-            <div class="data-row">
-                <span class="label">Audio Context Hash:</span> 
-                <span id="audio-fp" class="value" style="font-size:0.7rem">CALCULATING...</span>
-            </div>
-            
-            <div id="identity-match" style="display:none;">
-                <div class="score-box">
-                    <span class="score-desc">Re-Identification Probability</span>
-                    <span id="score-val" class="score-val">0%</span>
-                    <div id="score-msg" style="margin-top:5px; font-weight:bold;">ANALYZING...</div>
-                </div>
+            <div class="card">
+                <h2>🛰️ Live Metadata Interception</h2>
+                <div id="feed"></div>
+                <p id="persistence" style="font-size: 0.75rem; margin-top: 10px; color: var(--blue);"></p>
             </div>
         </div>
     </div>
 </div>
 
-<canvas id="fingerprint-canvas" width="200" height="50"></canvas>
+<canvas id="canv" width="200" height="40" style="display:none;"></canvas>
 
-<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
 
 <script>
-    // UTILS: Terminal Logger
-    const term = document.getElementById('terminal');
-    const log = (msg, type='info') => {
-        const div = document.createElement('div');
-        div.className = 'log-line ' + (type === 'warn' ? 'log-warn' : '');
-        div.innerText = `> [${new Date().toLocaleTimeString()}] ${msg}`;
-        term.appendChild(div);
-        term.scrollTop = term.scrollHeight;
+    const feed = document.getElementById('feed');
+    const log = (msg, isCritical = false) => {
+        const time = new Date().toLocaleTimeString();
+        const cls = isCritical ? 'log-entry critical' : 'log-entry';
+        feed.innerHTML = `<div class="${cls}">[${time}] ${msg}</div>` + feed.innerHTML;
     };
 
-    // --- 1. FINGERPRINTING ENGINE ---
+    // 1. PERSISTENCE CHECK
+    let v = localStorage.getItem('osint_v') || 0;
+    v++; localStorage.setItem('osint_v', v);
+    document.getElementById('persistence').innerText = v > 1 ? `RECURRING TARGET: Visit #${v} detected via LocalStorage.` : "NEW TARGET: No previous local traces found.";
+    if(v > 1) log(`Target re-identified. Persistence Match #${v}.`, true);
 
-    // A. Canvas Fingerprinting
-    const getCanvasFp = () => {
-        log("Rendering hidden Canvas ghost image...");
-        const canvas = document.getElementById('fingerprint-canvas');
-        const ctx = canvas.getContext('2d');
-        // Disegno complesso per stressare il rendering
-        ctx.textBaseline = "top";
-        ctx.font = "14px 'Arial'";
-        ctx.fillStyle = "#f60";
-        ctx.fillRect(125,1,62,20);
-        ctx.fillStyle = "#069";
-        ctx.fillText("X-RAY v3.0", 2, 15);
-        ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
-        ctx.fillText("X-RAY v3.0", 4, 17);
+    // 2. ADVANCED DEVICE & BROWSER DETECTION
+    const ua = navigator.userAgent;
+    document.getElementById('os').innerText = navigator.platform;
+    document.getElementById('screen').innerText = `${screen.width}x${screen.height} (${screen.colorDepth}-bit)`;
+    document.getElementById('tz').innerText = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.getElementById('lang').innerText = navigator.languages.join(', ');
+    document.getElementById('dnt').innerText = navigator.doNotTrack === "1" ? "ENABLED" : "DISABLED";
+
+    // Precise Browser Logic
+    let b = "Unknown";
+    if (ua.includes("OPR") || ua.includes("Opera")) b = "Opera";
+    else if (ua.includes("Edg")) b = "MS Edge";
+    else if (ua.includes("Firefox")) b = "Firefox";
+    else if (ua.includes("Chrome")) b = "Chrome";
+    else if (ua.includes("Safari")) b = "Safari";
+    document.getElementById('browser').innerText = b;
+
+    // Advanced Device Model Detection
+    let modelName = "Unknown Mobile/PC";
+    if (/android/i.test(ua)) {
+        const match = ua.match(/Android\s+([^\s]+);(?:\s+([^;]+);)?\s+([^)]+)/);
+        modelName = match ? (match[3] || match[2] || "Android Device").split("Build")[0] : "Android Device";
+    } else if (/iPhone|iPad/.test(ua)) {
+        modelName = "Apple iOS Device";
+    }
+    document.getElementById('model').innerText = modelName;
+
+    // Client Hints API (High Entropy)
+    if (navigator.userAgentData?.getHighEntropyValues) {
+        navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion']).then(u => {
+            if(u.model) {
+                document.getElementById('model').innerText = u.model;
+                log(`CRITICAL: High-entropy hardware signature: ${u.model}`, true);
+            }
+        });
+    }
+
+    // 3. HARDWARE FORENSICS
+    document.getElementById('cpu').innerText = `${navigator.hardwareConcurrency || 'N/A'} logical cores`;
+    document.getElementById('ram').innerText = `~${navigator.deviceMemory || 'N/A'} GB`;
+    document.getElementById('theme').innerText = window.matchMedia('(prefers-color-scheme: dark)').matches ? "Dark Mode" : "Light Mode";
+
+    // GPU
+    const gl = document.createElement('canvas').getContext('webgl');
+    if (gl) {
+        const debug = gl.getExtension('WEBGL_debug_renderer_info');
+        document.getElementById('gpu').innerText = debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : "Generic";
+    }
+
+    // Battery
+    if (navigator.getBattery) {
+        navigator.getBattery().then(bt => {
+            const up = () => document.getElementById('battery').innerText = `${Math.round(bt.level * 100)}% (${bt.charging ? 'Charging' : 'Unplugged'})`;
+            up(); bt.onlevelchange = up;
+        });
+    }
+
+    // --- 4. MAP RENDERING LOGIC (NEW) ---
+    let mapInitialized = false;
+    function renderMap(lat, lon, label) {
+        if(mapInitialized) return; // Evita di reinizializzare se cambiamo fonte
         
-        // Hashing
-        const b64 = canvas.toDataURL().replace("data:image/png;base64,","");
-        const bin = atob(b64);
-        let hash = 0;
-        for (let i = 0; i < bin.length; i++) {
-            hash = ((hash << 5) - hash) + bin.charCodeAt(i);
-            hash |= 0;
+        const map = L.map('map').setView([lat, lon], 13);
+        
+        // Tile Layer OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Marker con Popup
+        L.marker([lat, lon]).addTo(map)
+            .bindPopup(`<b>TARGET DETECTED</b><br>${label}`)
+            .openPopup();
+        
+        mapInitialized = true;
+        log(`GPS Triangulation successful: ${lat}, ${lon}`);
+    }
+
+    // --- 5. ADVANCED MULTI-SOURCE NETWORK PROBE (MODIFIED FOR COORDINATES) ---
+    const networkSources = [
+        {
+            url: 'https://ipwho.is/',
+            map: (d) => {
+                if (!d.success) throw new Error("API Limit"); 
+                // Aggiunto lat/lon
+                return { ip: d.ip, geo: `${d.city}, ${d.country}`, isp: d.connection.isp || d.connection.org, lat: d.latitude, lon: d.longitude };
+            }
+        },
+        {
+            url: 'https://freeipapi.com/api/json',
+            map: (d) => ({ ip: d.ipAddress, geo: `${d.cityName}, ${d.countryName}`, isp: d.asName, lat: d.latitude, lon: d.longitude })
+        },
+        {
+            url: 'https://ipapi.co/json/',
+            map: (d) => ({ ip: d.ip, geo: `${d.city}, ${d.country_name}`, isp: d.org, lat: d.latitude, lon: d.longitude })
         }
-        const finalHash = "CNV-" + Math.abs(hash).toString(16).toUpperCase();
-        document.getElementById('canvas-fp').innerText = finalHash;
-        log(`Canvas Signature extracted: ${finalHash}`);
-        return finalHash;
-    };
+    ];
 
-    // B. Audio Fingerprinting (AudioContext)
-    const getAudioFp = async () => {
+    async function probeNetwork(index = 0) {
+        if (index >= networkSources.length) {
+            log("CRITICAL: All network APIs failed. Target might be using a high-security VPN or Proxy.", true);
+            document.getElementById('map').innerHTML = "<div style='color:red; text-align:center; padding-top:100px;'>GEOLOCATION FAILED</div>";
+            return;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+
         try {
-            log("Accessing AudioContext oscillator...");
-            const audioCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100);
-            const osc = audioCtx.createOscillator();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(10000, audioCtx.currentTime);
-            const compressor = audioCtx.createDynamicsCompressor();
+            log(`Probing network source #${index + 1}...`);
+            const response = await fetch(networkSources[index].url, { signal: controller.signal });
             
-            // Parametri compressore
-            compressor.threshold.setValueAtTime(-50, audioCtx.currentTime);
-            compressor.knee.setValueAtTime(40, audioCtx.currentTime);
-            compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
-            compressor.attack.setValueAtTime(0, audioCtx.currentTime);
-            compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+            if (!response.ok) throw new Error("Connection error");
+            
+            const rawData = await response.json();
+            const data = networkSources[index].map(rawData);
 
-            osc.connect(compressor);
-            compressor.connect(audioCtx.destination);
-            osc.start(0);
+            // Update UI
+            document.getElementById('ip').innerText = data.ip;
+            document.getElementById('geo').innerText = data.geo;
+            document.getElementById('isp').innerText = data.isp;
             
-            const buffer = await audioCtx.startRendering();
-            const data = buffer.getChannelData(0);
-            let sum = 0;
-            // Calcolo hash semplice sui dati audio
-            for (let i = 0; i < data.length; i++) sum += Math.abs(data[i]);
+            // --- ATTIVA MAPPA SE ABBIAMO COORDINATE ---
+            if(data.lat && data.lon) {
+                renderMap(data.lat, data.lon, data.geo);
+            }
             
-            const fp = "AUD-" + sum.toString().replace('.', '').substring(0, 10);
-            document.getElementById('audio-fp').innerText = fp;
-            log(`Audio Stack footprint
+            log(`Network Identity intercepted via Source #${index + 1}: ${data.ip}`);
+            clearTimeout(timeoutId);
+        } catch (err) {
+            clearTimeout(timeoutId);
+            log(`Source #${index + 1} failed or timed out. Trying next...`);
+            probeNetwork(index + 1); 
+        }
+    }
+
+    // Avvio automatico al caricamento
+    probeNetwork();
+
+    // Gestione Connection Type
+    const n = navigator.connection;
+    if (n) document.getElementById('conn-type').innerText = `${n.effectiveType.toUpperCase()} (Downlink: ${n.downlink}Mbps)`;
+
+    // 6. WEBRTC LEAK
+    const pc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
+    pc.createDataChannel("");
+    pc.onicecandidate = e => {
+        if (!e.candidate) return;
+        const res = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
+        if (res) {
+            document.getElementById('webrtc').innerText = res[1];
+            log(`SECURITY BREACH: Local IP leaked: ${res[1]}`, true);
+        }
+    };
+    pc.createOffer().then(s => pc.setLocalDescription(s));
+
+    // 7. FINGERPRINTING
+    const c = document.getElementById('canv');
+    const ct = c.getContext('2d');
+    ct.fillText("OSINT-ANALYSER-PRO", 2, 10);
+    let h = 0, str = c.toDataURL();
+    for(let i=0; i<str.length; i++) h = ((h << 5) - h) + str.charCodeAt(i);
+    document.getElementById('fp').innerText = `ID-${Math.abs(h)}`;
+
+    // 8. BEHAVIORAL LOGS
+    window
