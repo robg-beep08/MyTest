@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital X-RAY | Full Auto Scanner</title>
+    <title>Digital X-RAY | Forensic Scanner Pro</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
@@ -27,7 +27,7 @@
         h1 { color: var(--neon); margin: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 2rem; text-shadow: 0 0 10px rgba(0, 255, 65, 0.3); }
         .subtitle { font-size: 0.9rem; letter-spacing: 2px; margin-top: 5px; color: #fff; animation: blink 2s infinite; }
 
-        /* GRIGLIA RESPONSIVE (Assicura 2 colonne su PC, 1 su Mobile) */
+        /* GRIGLIA */
         .grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
@@ -42,13 +42,12 @@
             padding: 15px; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
             display: flex; flex-direction: column;
-            min-height: 300px; /* Altezza minima per uniformità */
         }
         h2 { color: var(--neon); font-size: 1.1rem; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; }
         
         .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; font-size: 0.85rem; }
-        .label { color: #888; font-weight: bold; }
-        .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; max-width: 60%; }
+        .label { color: #888; font-weight: bold; min-width: 100px; }
+        .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; max-width: 65%; }
         
         /* Mappa */
         #map { 
@@ -79,8 +78,8 @@
 
 <div class="wrapper">
     <header>
-        <h1>DIGITAL X-RAY v9.0</h1>
-        <div class="subtitle">>>> AUTO-SURVEILLANCE ACTIVE <<<</div>
+        <h1>DIGITAL X-RAY v10.0</h1>
+        <div class="subtitle">>>> DEEP PACKET INSPECTION <<<</div>
     </header>
     
     <div class="grid">
@@ -107,16 +106,18 @@
         </div>
 
         <div class="card" style="border-top-color: var(--warn);">
-            <h2>🕵️ Browser & Privacy</h2>
-            <div class="row"><span class="label">Browser Identity:</span> <span id="browser" class="val"></span></div>
-            <div class="row"><span class="label">Language:</span> <span id="lang" class="val"></span></div>
-            <div class="row"><span class="label">System Time:</span> <span id="sys-tz" class="val"></span></div>
+            <h2>🕵️ Browser & Headers</h2>
+            <div class="row"><span class="label">Browser ID:</span> <span id="browser" class="val"></span></div>
+            <div class="row"><span class="label">Languages:</span> <span id="lang" class="val" style="color: #fff;"></span></div>
+            <div class="row" style="flex-direction: column; align-items: flex-start;">
+                <span class="label" style="margin-bottom: 5px;">User Agent String:</span>
+                <span id="ua" class="val" style="text-align: left; width: 100%; max-width: 100%; font-size: 0.65rem; color: #888;"></span>
+            </div>
+            
             <div class="row"><span class="label">Do Not Track:</span> <span id="dnt" class="val"></span></div>
             
             <div id="incognito-warn" class="badge-warn">🕵️ INCOGNITO MODE DETECTED</div>
             <div id="adblock-warn" class="badge-warn">🚫 AD-BLOCKER ACTIVE</div>
-            
-            <div class="row" style="margin-top:10px; background:rgba(255,0,0,0.1);"><span class="label" style="color:var(--alert)">WebRTC Leak:</span> <span id="webrtc" class="val">...</span></div>
         </div>
 
         <div class="card" style="border-top-color: var(--alert);">
@@ -147,19 +148,24 @@
 <div id="ad-test" style="position:absolute; top:-999px; left:-999px; width:1px; height:1px;" class="ads ad-banner"></div>
 
 <script>
-    // --- AVVIO AUTOMATICO ---
     window.addEventListener('DOMContentLoaded', () => {
         
         // 1. SYSTEM INFO
         const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        document.getElementById('sys-tz').innerText = sysTz;
         document.getElementById('os').innerText = navigator.platform;
-        document.getElementById('lang').innerText = navigator.language;
         document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Cores";
         document.getElementById('ram').innerText = (navigator.deviceMemory || '?') + " GB";
         document.getElementById('dnt').innerText = navigator.doNotTrack == "1" ? "Enabled" : "Disabled";
 
-        // Browser Detection
+        // --- AGGIORNAMENTO LINGUE E USER AGENT ---
+        // Recupera tutte le lingue, non solo la prima
+        const langs = navigator.languages ? navigator.languages.join(', ') : navigator.language;
+        document.getElementById('lang').innerText = langs;
+        
+        // User Agent grezzo
+        document.getElementById('ua').innerText = navigator.userAgent;
+
+        // Browser Detection Semplice
         const ua = navigator.userAgent;
         let b = "Unknown";
         if(ua.includes("OPR")||ua.includes("Opera")) b="Opera";
@@ -183,13 +189,11 @@
         if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
 
         // 2. PRIVACY CHECKS
-        // AdBlock
         setTimeout(() => {
             if(document.getElementById('ad-test').clientHeight === 0) 
                 document.getElementById('adblock-warn').style.display = 'block';
         }, 800);
         
-        // Incognito (Storage Quota)
         if('storage' in navigator && 'estimate' in navigator.storage) {
             navigator.storage.estimate().then(est => {
                 if(est.quota < 120000000) document.getElementById('incognito-warn').style.display = 'block';
@@ -199,7 +203,6 @@
         // 3. NETWORK SCAN
         async function runNet() {
             try {
-                // Fonte primaria
                 const res = await fetch('https://ipwho.is/');
                 const data = await res.json();
                 
@@ -209,19 +212,16 @@
                     document.getElementById('geo').innerText = `${data.city}, ${data.country}`;
                     document.getElementById('ip-tz').innerText = data.timezone.id;
 
-                    // Mappa
                     if(typeof L !== 'undefined') {
                         const map = L.map('map').setView([data.latitude, data.longitude], 13);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' }).addTo(map);
                         L.marker([data.latitude, data.longitude]).addTo(map).bindPopup("TARGET LOCKED").openPopup();
                     }
 
-                    // VPN Check (Region Mismatch)
                     if(data.timezone.id.split('/')[0] !== sysTz.split('/')[0]) {
                         document.getElementById('vpn-warn').style.display = 'block';
                     }
 
-                    // Avvia Forensic Check con IP valido
                     runForensics(data.ip);
                 }
             } catch(e) {
@@ -231,10 +231,9 @@
         }
         runNet();
 
-        // 4. FORENSICS (Canvas + Audio + Zombie)
+        // 4. FORENSICS
         function runForensics(currentIP) {
             setTimeout(() => {
-                // Canvas ID
                 const canvas = document.getElementById('canv');
                 const ctx = canvas.getContext('2d');
                 ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillStyle = "#f60"; ctx.fillRect(125,1,62,20);
@@ -247,7 +246,6 @@
                 const fp = "CNV-" + (crc >>> 0).toString(16).toUpperCase();
                 document.getElementById('fp').innerText = fp;
 
-                // Audio ID
                 try {
                     const ac = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100);
                     const osc = ac.createOscillator(); osc.type='triangle'; osc.frequency.setValueAtTime(10000, ac.currentTime);
@@ -258,20 +256,17 @@
                     });
                 } catch(e){}
 
-                // Zombie Check (Audit)
                 function markFound(id) { const el=document.getElementById(id); el.innerText="✅ FOUND"; el.style.color="#00ff41"; el.style.fontWeight="bold"; }
                 
                 if(navigator.cookieEnabled) { document.cookie="z=1"; if(document.cookie.indexOf("z")!==-1) markFound('audit-cookie'); }
                 try { localStorage.setItem('z',1); markFound('audit-ls'); } catch(e){}
                 try { const r=indexedDB.open("z",1); r.onupgradeneeded=e=>e.target.result.createObjectStore("s"); r.onsuccess=e=>{markFound('audit-idb');e.target.result.close();}}catch(e){}
 
-                // MATCH REPORT (Confronto Storico)
                 const history = JSON.parse(localStorage.getItem('xray_log') || 'null');
                 const now = new Date().toLocaleTimeString();
 
                 if (history && history.id === fp) {
                     if (history.ip !== currentIP && currentIP !== "Unknown IP") {
-                        // MATCH TROVATO (IP Diverso)
                         document.getElementById('forensic-report').style.display = 'block';
                         document.getElementById('old-time').innerText = history.time;
                         document.getElementById('old-ip').innerText = history.ip;
@@ -285,23 +280,12 @@
                     document.getElementById('clean-msg').style.display = 'block';
                 }
 
-                // Salva
                 if (currentIP !== "Unknown IP") {
                     localStorage.setItem('xray_log', JSON.stringify({ id: fp, ip: currentIP, time: now }));
                 }
 
             }, 500);
         }
-
-        // WebRTC
-        const pc = new RTCPeerConnection({iceServers:[]}); pc.createDataChannel(''); pc.createOffer().then(o=>pc.setLocalDescription(o));
-        pc.onicecandidate = e => { 
-            if(e.candidate) {
-                const ip = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
-                if(ip) document.getElementById('webrtc').innerText = ip[1];
-            }
-        }
-
     });
 </script>
 
