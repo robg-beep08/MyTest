@@ -79,4 +79,231 @@
 
 <div class="wrapper">
     <header>
-        <h1>DIG
+        <h1>DIGITAL X-RAY v9.0</h1>
+        <div class="subtitle">>>> AUTO-SURVEILLANCE ACTIVE <<<</div>
+    </header>
+    
+    <div class="grid">
+        
+        <div class="card" style="border-top-color: var(--blue);">
+            <h2>📡 Network Analysis</h2>
+            <div class="row"><span class="label">Public IPv4:</span> <span id="ip" class="val" style="color:var(--neon)">SCANNING...</span></div>
+            <div class="row"><span class="label">ISP / Carrier:</span> <span id="isp" class="val">...</span></div>
+            <div class="row"><span class="label">Location:</span> <span id="geo" class="val">...</span></div>
+            <div class="row"><span class="label">Timezone:</span> <span id="ip-tz" class="val">...</span></div>
+            
+            <div id="vpn-warn" class="badge-warn">⚠️ VPN DETECTED (Region Mismatch)</div>
+            <div id="map"></div>
+        </div>
+
+        <div class="card">
+            <h2>📱 Hardware Fingerprint</h2>
+            <div class="row"><span class="label">Device Type:</span> <span id="model" class="val">DETECTING...</span></div>
+            <div class="row"><span class="label">OS Platform:</span> <span id="os" class="val"></span></div>
+            <div class="row"><span class="label">CPU Cores:</span> <span id="cpu" class="val"></span></div>
+            <div class="row"><span class="label">GPU Renderer:</span> <span id="gpu" class="val"></span></div>
+            <div class="row"><span class="label">RAM Memory:</span> <span id="ram" class="val"></span></div>
+            <div class="row"><span class="label">Battery:</span> <span id="battery" class="val">N/A</span></div>
+        </div>
+
+        <div class="card" style="border-top-color: var(--warn);">
+            <h2>🕵️ Browser & Privacy</h2>
+            <div class="row"><span class="label">Browser Identity:</span> <span id="browser" class="val"></span></div>
+            <div class="row"><span class="label">Language:</span> <span id="lang" class="val"></span></div>
+            <div class="row"><span class="label">System Time:</span> <span id="sys-tz" class="val"></span></div>
+            <div class="row"><span class="label">Do Not Track:</span> <span id="dnt" class="val"></span></div>
+            
+            <div id="incognito-warn" class="badge-warn">🕵️ INCOGNITO MODE DETECTED</div>
+            <div id="adblock-warn" class="badge-warn">🚫 AD-BLOCKER ACTIVE</div>
+            
+            <div class="row" style="margin-top:10px; background:rgba(255,0,0,0.1);"><span class="label" style="color:var(--alert)">WebRTC Leak:</span> <span id="webrtc" class="val">...</span></div>
+        </div>
+
+        <div class="card" style="border-top-color: var(--alert);">
+            <h2>🧬 Forensics & Zombies</h2>
+            <div class="row"><span class="label">Canvas ID:</span> <span id="fp" class="val" style="color:var(--alert)">WAITING...</span></div>
+            <div class="row"><span class="label">Audio ID:</span> <span id="audio-fp" class="val" style="color:var(--alert)">WAITING...</span></div>
+
+            <h3 style="font-size:0.8rem; color:#aaa; margin-top:15px; border-bottom:1px solid #333;">🧟 Zombie Storage Audit</h3>
+            <div class="audit-row"><span>🍪 Cookies:</span><span id="audit-cookie" style="color:#555">Clean</span></div>
+            <div class="audit-row"><span>📦 LocalStorage:</span><span id="audit-ls" style="color:#555">Clean</span></div>
+            <div class="audit-row"><span>🗄️ IndexedDB:</span><span id="audit-idb" style="color:#555">Clean</span></div>
+
+            <div id="forensic-report">
+                <div style="color:var(--alert); font-weight:bold; text-align:center; font-size:0.75rem;">⚠️ DEVICE RE-IDENTIFIED (IP CHANGED)</div>
+                <table class="rep-table">
+                    <tr><th>Data</th><th>Previous</th><th>Current</th></tr>
+                    <tr><td>Time</td><td id="old-time"></td><td id="new-time">Now</td></tr>
+                    <tr><td>IP</td><td id="old-ip"></td><td id="new-ip"></td></tr>
+                </table>
+            </div>
+             <div id="clean-msg" style="margin-top:10px; font-size:0.75rem; text-align:center; color:#555; display:none;">No prior correlation found.</div>
+        </div>
+
+    </div>
+</div>
+
+<canvas id="canv" width="200" height="50" style="display:none;"></canvas>
+<div id="ad-test" style="position:absolute; top:-999px; left:-999px; width:1px; height:1px;" class="ads ad-banner"></div>
+
+<script>
+    // --- AVVIO AUTOMATICO ---
+    window.addEventListener('DOMContentLoaded', () => {
+        
+        // 1. SYSTEM INFO
+        const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        document.getElementById('sys-tz').innerText = sysTz;
+        document.getElementById('os').innerText = navigator.platform;
+        document.getElementById('lang').innerText = navigator.language;
+        document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Cores";
+        document.getElementById('ram').innerText = (navigator.deviceMemory || '?') + " GB";
+        document.getElementById('dnt').innerText = navigator.doNotTrack == "1" ? "Enabled" : "Disabled";
+
+        // Browser Detection
+        const ua = navigator.userAgent;
+        let b = "Unknown";
+        if(ua.includes("OPR")||ua.includes("Opera")) b="Opera";
+        else if(ua.includes("Edg")) b="Edge";
+        else if(ua.includes("Chrome")) b="Chrome";
+        else if(ua.includes("Firefox")) b="Firefox";
+        else if(ua.includes("Safari")) b="Safari";
+        document.getElementById('browser').innerText = b;
+
+        // Model
+        document.getElementById('model').innerText = /Mobi/.test(ua) ? "Mobile Device" : "Desktop PC";
+
+        // GPU
+        try {
+            const gl = document.createElement('canvas').getContext('webgl');
+            const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+            document.getElementById('gpu').innerText = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
+        } catch(e){}
+
+        // Battery
+        if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
+
+        // 2. PRIVACY CHECKS
+        // AdBlock
+        setTimeout(() => {
+            if(document.getElementById('ad-test').clientHeight === 0) 
+                document.getElementById('adblock-warn').style.display = 'block';
+        }, 800);
+        
+        // Incognito (Storage Quota)
+        if('storage' in navigator && 'estimate' in navigator.storage) {
+            navigator.storage.estimate().then(est => {
+                if(est.quota < 120000000) document.getElementById('incognito-warn').style.display = 'block';
+            });
+        }
+
+        // 3. NETWORK SCAN
+        async function runNet() {
+            try {
+                // Fonte primaria
+                const res = await fetch('https://ipwho.is/');
+                const data = await res.json();
+                
+                if(data.success) {
+                    document.getElementById('ip').innerText = data.ip;
+                    document.getElementById('isp').innerText = data.connection.isp;
+                    document.getElementById('geo').innerText = `${data.city}, ${data.country}`;
+                    document.getElementById('ip-tz').innerText = data.timezone.id;
+
+                    // Mappa
+                    if(typeof L !== 'undefined') {
+                        const map = L.map('map').setView([data.latitude, data.longitude], 13);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' }).addTo(map);
+                        L.marker([data.latitude, data.longitude]).addTo(map).bindPopup("TARGET LOCKED").openPopup();
+                    }
+
+                    // VPN Check (Region Mismatch)
+                    if(data.timezone.id.split('/')[0] !== sysTz.split('/')[0]) {
+                        document.getElementById('vpn-warn').style.display = 'block';
+                    }
+
+                    // Avvia Forensic Check con IP valido
+                    runForensics(data.ip);
+                }
+            } catch(e) {
+                document.getElementById('ip').innerText = "NETWORK ERROR";
+                runForensics("Unknown IP");
+            }
+        }
+        runNet();
+
+        // 4. FORENSICS (Canvas + Audio + Zombie)
+        function runForensics(currentIP) {
+            setTimeout(() => {
+                // Canvas ID
+                const canvas = document.getElementById('canv');
+                const ctx = canvas.getContext('2d');
+                ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillStyle = "#f60"; ctx.fillRect(125,1,62,20);
+                ctx.fillStyle = "#069"; ctx.fillText("X-RAY", 2, 15);
+                let b64 = canvas.toDataURL().replace("data:image/png;base64,","");
+                let bin = atob(b64);
+                let crc = -1;
+                const crcTable = (function(){ let c; let t=[]; for(let n=0; n<256; n++){ c=n; for(let k=0; k<8; k++) c=((c&1)?(0xEDB88320^(c>>>1)):(c>>>1)); t[n]=c; } return t; })();
+                for(let i=0; i<bin.length; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ bin.charCodeAt(i)) & 0xFF];
+                const fp = "CNV-" + (crc >>> 0).toString(16).toUpperCase();
+                document.getElementById('fp').innerText = fp;
+
+                // Audio ID
+                try {
+                    const ac = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100);
+                    const osc = ac.createOscillator(); osc.type='triangle'; osc.frequency.setValueAtTime(10000, ac.currentTime);
+                    const comp = ac.createDynamicsCompressor(); osc.connect(comp); comp.connect(ac.destination); osc.start(0);
+                    ac.startRendering().then(b => {
+                        let sum=0; const d=b.getChannelData(0); for(let i=0;i<d.length;i++) sum+=Math.abs(d[i]);
+                        document.getElementById('audio-fp').innerText = "AUD-" + sum.toString().replace('.','').substr(0,10);
+                    });
+                } catch(e){}
+
+                // Zombie Check (Audit)
+                function markFound(id) { const el=document.getElementById(id); el.innerText="✅ FOUND"; el.style.color="#00ff41"; el.style.fontWeight="bold"; }
+                
+                if(navigator.cookieEnabled) { document.cookie="z=1"; if(document.cookie.indexOf("z")!==-1) markFound('audit-cookie'); }
+                try { localStorage.setItem('z',1); markFound('audit-ls'); } catch(e){}
+                try { const r=indexedDB.open("z",1); r.onupgradeneeded=e=>e.target.result.createObjectStore("s"); r.onsuccess=e=>{markFound('audit-idb');e.target.result.close();}}catch(e){}
+
+                // MATCH REPORT (Confronto Storico)
+                const history = JSON.parse(localStorage.getItem('xray_log') || 'null');
+                const now = new Date().toLocaleTimeString();
+
+                if (history && history.id === fp) {
+                    if (history.ip !== currentIP && currentIP !== "Unknown IP") {
+                        // MATCH TROVATO (IP Diverso)
+                        document.getElementById('forensic-report').style.display = 'block';
+                        document.getElementById('old-time').innerText = history.time;
+                        document.getElementById('old-ip').innerText = history.ip;
+                        document.getElementById('new-ip').innerText = currentIP;
+                    } else {
+                        document.getElementById('clean-msg').innerText = "Session Continuity (Same IP/ID).";
+                        document.getElementById('clean-msg').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('clean-msg').innerText = "New Device Profile Created.";
+                    document.getElementById('clean-msg').style.display = 'block';
+                }
+
+                // Salva
+                if (currentIP !== "Unknown IP") {
+                    localStorage.setItem('xray_log', JSON.stringify({ id: fp, ip: currentIP, time: now }));
+                }
+
+            }, 500);
+        }
+
+        // WebRTC
+        const pc = new RTCPeerConnection({iceServers:[]}); pc.createDataChannel(''); pc.createOffer().then(o=>pc.setLocalDescription(o));
+        pc.onicecandidate = e => { 
+            if(e.candidate) {
+                const ip = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(e.candidate.candidate);
+                if(ip) document.getElementById('webrtc').innerText = ip[1];
+            }
+        }
+
+    });
+</script>
+
+</body>
+</html>
