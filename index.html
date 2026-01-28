@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital X-RAY | Forensic Suite v14</title>
+    <title>Digital X-RAY | Resilient Scanner v15</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
@@ -21,20 +21,15 @@
         }
 
         body { font-family: 'Segoe UI', 'Courier New', monospace; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; overflow-x: hidden; }
-        .wrapper { max-width: 1600px; margin: auto; } /* Allargato per ospitare più schede */
+        .wrapper { max-width: 1600px; margin: auto; }
 
         /* HEADER */
         header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--neon); padding-bottom: 15px; }
         h1 { color: var(--neon); margin: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 2rem; text-shadow: 0 0 10px rgba(0, 255, 65, 0.3); }
         .subtitle { font-size: 0.9rem; letter-spacing: 2px; margin-top: 5px; color: #fff; animation: blink 2s infinite; }
 
-        /* GRIGLIA INTELLIGENTE */
-        .grid { 
-            display: grid; 
-            /* Crea colonne automatiche larghe almeno 350px. Se c'è spazio, ne mette 3 o 4 in fila. */
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
-            gap: 20px; 
-        }
+        /* GRIGLIA */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
         
         /* CARDS */
         .card { 
@@ -47,16 +42,13 @@
         .label { color: #888; font-weight: bold; }
         .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; }
         
-        /* Sezione User Agent Specifica */
-        .ua-box {
-            background: #000; border: 1px dashed #333; padding: 8px; margin-top: 10px;
-            font-size: 0.65rem; color: #aaa; font-family: 'Consolas', monospace; word-break: break-all;
-        }
+        /* Sezione User Agent */
+        .ua-box { background: #000; border: 1px dashed #333; padding: 8px; margin-top: 10px; font-size: 0.65rem; color: #aaa; font-family: 'Consolas', monospace; word-break: break-all; }
 
         /* Mappa */
         #map { height: 180px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); }
 
-        /* STATUS INDICATORS (X / V) per la sezione filtri */
+        /* STATUS INDICATORS */
         .status-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #222; font-size: 0.8rem; }
         .status-label { color: #aaa; }
         .status-icon { font-weight: bold; font-family: monospace; }
@@ -89,8 +81,8 @@
 
 <div class="wrapper">
     <header>
-        <h1>DIGITAL X-RAY v14.0</h1>
-        <div class="subtitle">>>> FULL SPECTRUM ANALYSIS <<<</div>
+        <h1>DIGITAL X-RAY v15.0</h1>
+        <div class="subtitle">>>> RESILIENT FORENSIC SCANNER <<<</div>
     </header>
     
     <div class="grid">
@@ -100,7 +92,8 @@
             <div class="row"><span class="label">Public IP:</span> <span id="ip" class="val" style="color:var(--neon)">SCANNING...</span></div>
             <div class="row"><span class="label">ISP / Org:</span> <span id="isp" class="val">...</span></div>
             <div class="row"><span class="label">Location:</span> <span id="geo" class="val">...</span></div>
-            <div class="row"><span class="label">Timezone (IP):</span> <span id="ip-tz" class="val">...</span></div>
+            <div class="row"><span class="label">Network Source:</span> <span id="net-source" class="val" style="color:#777; font-size:0.7rem;">...</span></div>
+            
             <div id="vpn-warn" class="badge-warn">⚠️ VPN DETECTED (Region Mismatch)</div>
             <div id="map"></div>
         </div>
@@ -184,7 +177,7 @@
         document.getElementById('screen').innerText = `${screen.width}x${screen.height}`;
         document.getElementById('dnt').innerText = navigator.doNotTrack == "1" ? "Enabled" : "Disabled";
 
-        // BROWSER IDENTITY (Completa)
+        // BROWSER IDENTITY
         const langs = navigator.languages ? navigator.languages.join(', ') : navigator.language;
         document.getElementById('lang').innerText = langs;
         document.getElementById('ua').innerText = navigator.userAgent;
@@ -206,55 +199,94 @@
         } catch(e){}
         if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
 
-        // --- 2. ADVANCED FILTERS & PROXY DETECTION ---
-        
-        // AdBlock
+        // --- 2. FILTERS & PROXY ---
         setTimeout(() => {
             if(document.getElementById('ad-test').clientHeight === 0) setStatus('chk-adblock', true);
         }, 800);
 
-        // Dark Reader (Check DOM Injection)
         setTimeout(() => {
             if(document.querySelector('meta[name="darkreader"]') || document.querySelector('style.darkreader')) {
                 setStatus('chk-darkreader', true);
             }
         }, 1000);
 
-        // Tor Letterboxing
         const wDiff = window.outerWidth - window.innerWidth;
         const hDiff = window.outerHeight - window.innerHeight;
         if(wDiff > 120 || hDiff > 120) setStatus('chk-letterbox', true);
 
-        // --- 3. NETWORK SCAN ---
+        // --- 3. ROBUST MULTI-SOURCE NETWORK SCAN ---
         async function runNet() {
-            try {
-                // Usiamo ipwho.is per i dati di security
-                const res = await fetch('https://ipwho.is/');
-                const data = await res.json();
-                
-                if(data.success) {
-                    document.getElementById('ip').innerText = data.ip;
-                    document.getElementById('isp').innerText = data.connection.isp;
-                    document.getElementById('geo').innerText = `${data.city}, ${data.country}`;
-                    document.getElementById('ip-tz').innerText = data.timezone.id;
+            // Lista di API di backup
+            const sources = [
+                { url: 'https://ipwho.is/', type: 'IpWhoIs' }, // Primaria (Dettagliata)
+                { url: 'https://ipapi.co/json/', type: 'IpApi' }, // Backup 1
+                { url: 'https://api.db-ip.com/v2/free/self', type: 'DbIp' } // Backup 2 (Solo IP+Geo base)
+            ];
 
-                    if(typeof L !== 'undefined') {
-                        const map = L.map('map').setView([data.latitude, data.longitude], 13);
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' }).addTo(map);
-                        L.marker([data.latitude, data.longitude]).addTo(map).bindPopup("LOCKED").openPopup();
-                    }
+            let success = false;
 
-                    // VPN / Proxy / Tor IP Detection
-                    if(data.timezone.id.split('/')[0] !== sysTz.split('/')[0]) document.getElementById('vpn-warn').style.display = 'block';
+            for (const source of sources) {
+                if(success) break; // Se abbiamo già i dati, usciamo
+                try {
+                    // console.log("Trying " + source.type); // Debug
+                    const res = await fetch(source.url);
+                    if(!res.ok) throw new Error("Blocked");
+                    const data = await res.json();
                     
-                    if(data.security.is_vpn || data.security.is_proxy || data.security.is_tor) {
-                        setStatus('chk-tor-ip', true);
-                        if(data.security.is_proxy) setStatus('chk-proxy', true);
+                    // Normalizzazione dati (perché le API hanno nomi campi diversi)
+                    let ip, isp, city, country, tz, lat, lon, isProxy = false;
+
+                    if(source.type === 'IpWhoIs') {
+                        if(!data.success) throw new Error("Limit");
+                        ip = data.ip; isp = data.connection.isp; city = data.city; country = data.country;
+                        tz = data.timezone.id; lat = data.latitude; lon = data.longitude;
+                        if(data.security.is_vpn || data.security.is_proxy) isProxy = true;
+                    } 
+                    else if (source.type === 'IpApi') {
+                        ip = data.ip; isp = data.org; city = data.city; country = data.country_name;
+                        tz = data.timezone; lat = data.latitude; lon = data.longitude;
+                    }
+                    else if (source.type === 'DbIp') {
+                        ip = data.ipAddress; isp = "Unknown (Backup API)"; city = data.city; country = data.countryName;
+                        tz = "Unknown"; lat = 0; lon = 0; // DB-IP free non da lat/lon
                     }
 
-                    runForensics(data.ip);
+                    // Aggiorna UI
+                    document.getElementById('ip').innerText = ip;
+                    document.getElementById('isp').innerText = isp;
+                    document.getElementById('geo').innerText = `${city}, ${country}`;
+                    if(tz) document.getElementById('ip-tz').innerText = tz;
+                    document.getElementById('net-source').innerText = `Source: ${source.type} (Connected)`;
+
+                    // Mappa (Se abbiamo coordinate)
+                    if(lat !== 0 && typeof L !== 'undefined') {
+                        const map = L.map('map').setView([lat, lon], 13);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' }).addTo(map);
+                        L.marker([lat, lon]).addTo(map).bindPopup("TARGET LOCKED").openPopup();
+                    }
+
+                    // VPN Check
+                    if(tz && tz !== "Unknown" && tz.split('/')[0] !== sysTz.split('/')[0]) {
+                        document.getElementById('vpn-warn').style.display = 'block';
+                    }
+                    if(isProxy) {
+                        setStatus('chk-tor-ip', true);
+                        setStatus('chk-proxy', true);
+                    }
+
+                    runForensics(ip);
+                    success = true; // Stop loop
+
+                } catch(e) {
+                    // console.log(source.type + " failed.");
                 }
-            } catch(e) { document.getElementById('ip').innerText = "ERR"; runForensics("Unknown"); }
+            }
+
+            if(!success) {
+                document.getElementById('ip').innerText = "CRITICAL NETWORK ERROR";
+                document.getElementById('net-source').innerText = "All probes blocked (AdBlock/Firewall)";
+                runForensics("Offline");
+            }
         }
         runNet();
 
@@ -266,10 +298,9 @@
                 ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillStyle = "#f60"; ctx.fillRect(125,1,62,20);
                 ctx.fillStyle = "#069"; ctx.fillText("X-RAY", 2, 15);
                 
-                // Canvas Protection Check
                 try {
                     let b64 = canvas.toDataURL();
-                    if(b64.length < 50) setStatus('chk-canvas-prot', true); // Se Tor restituisce vuoto
+                    if(b64.length < 50) setStatus('chk-canvas-prot', true);
                     
                     let bin = atob(b64.replace("data:image/png;base64,",""));
                     let crc = -1;
@@ -299,7 +330,7 @@
 
                 const history = JSON.parse(localStorage.getItem('xray_log') || 'null');
                 const now = new Date().toLocaleTimeString();
-                if (history && history.id === document.getElementById('fp').innerText && history.ip !== currentIP && currentIP !== "Unknown") {
+                if (history && history.id === document.getElementById('fp').innerText && history.ip !== currentIP && currentIP !== "Offline") {
                     document.getElementById('forensic-report').style.display = 'block';
                     document.getElementById('old-time').innerText = history.time;
                     document.getElementById('old-ip').innerText = history.ip;
@@ -307,11 +338,10 @@
                 } else if(!history) {
                     document.getElementById('clean-msg').style.display = 'block';
                 }
-                if (currentIP !== "Unknown") localStorage.setItem('xray_log', JSON.stringify({ id: document.getElementById('fp').innerText, ip: currentIP, time: now }));
+                if (currentIP !== "Offline") localStorage.setItem('xray_log', JSON.stringify({ id: document.getElementById('fp').innerText, ip: currentIP, time: now }));
             }, 500);
         }
 
-        // Helper Status
         function setStatus(id, detected) {
             const el = document.getElementById(id);
             if(detected) {
