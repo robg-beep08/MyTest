@@ -3,188 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital X-RAY | Ultimate Forensic Tool</title>
+    <title>Digital X-RAY | Full Auto Scanner</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
     <style>
-        /* VARIABILI DI BASE (Verranno cambiate da JS) */
         :root { 
-            --neon: #00ff41;    /* Verde Hacker Standard */
-            --alert: #ff3e3e;   /* Rosso Allarme */
+            --neon: #00ff41; 
+            --alert: #ff3e3e;
+            --warn: #ffca28; 
             --bg: #050505; 
             --card: #111; 
-            --text-main: #ccc;
+            --text-main: #ccc; 
+            --blue: #00f3ff;
         }
 
-        body { font-family: 'Segoe UI', 'Courier New', monospace; background: var(--bg); color: var(--text-main); margin: 0; padding: 0; overflow-x: hidden; }
-        
-        /* Layout Sfocabile per la Trappola */
-        #main-interface { padding: 20px; transition: filter 0.5s ease; filter: blur(10px); pointer-events: none; }
-        .wrapper { max-width: 1400px; margin: auto; } /* Allargato per far stare 4 colonne */
+        body { font-family: 'Segoe UI', 'Courier New', monospace; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; overflow-x: hidden; }
+        .wrapper { max-width: 1400px; margin: auto; }
 
-        /* --- POPUP TRAPPOLA --- */
-        #consent-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 9999;
-            display: flex; justify-content: center; align-items: center;
-            flex-direction: column;
-        }
-        .modal-content {
-            background: #111; border: 2px solid var(--neon); padding: 30px;
-            max-width: 500px; text-align: center; box-shadow: 0 0 50px rgba(0, 255, 65, 0.2);
-            border-radius: 8px;
-        }
-        .btn-group { display: flex; gap: 20px; justify-content: center; margin-top: 25px; }
-        button { padding: 15px 30px; font-weight: bold; cursor: pointer; border: none; font-family: monospace; text-transform: uppercase;}
-        .btn-accept { background: var(--neon); color: #000; box-shadow: 0 0 15px var(--neon); }
-        .btn-deny { background: transparent; border: 2px solid var(--alert); color: var(--alert); }
-        .btn-deny:hover { background: var(--alert); color: #000; box-shadow: 0 0 15px var(--alert); }
-        
-        /* Messaggio Trappola in Alto */
-        #trap-banner {
-            position: fixed; top: 0; left: 0; width: 100%; 
-            background: var(--alert); color: #000; font-weight: bold; padding: 10px;
-            z-index: 10000; display: none; text-align: center; text-transform: uppercase;
-            animation: slideDown 0.5s;
-        }
-
-        /* STILI GENERALI INTERFACCIA */
+        /* HEADER */
         header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--neon); padding-bottom: 15px; }
-        h1 { color: var(--neon); margin: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 2.2rem; text-shadow: 0 0 10px var(--neon); }
-        .subtitle { font-size: 0.9rem; letter-spacing: 2px; margin-top: 5px; color: #fff; }
+        h1 { color: var(--neon); margin: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 2rem; text-shadow: 0 0 10px rgba(0, 255, 65, 0.3); }
+        .subtitle { font-size: 0.9rem; letter-spacing: 2px; margin-top: 5px; color: #fff; animation: blink 2s infinite; }
 
-        /* GRIGLIA A 4 COLONNE (Responsive) */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        /* GRIGLIA RESPONSIVE (Assicura 2 colonne su PC, 1 su Mobile) */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
+            gap: 20px; 
+        }
         
         /* CARDS */
         .card { 
             background: var(--card); 
             border: 1px solid #333; 
-            border-top: 3px solid var(--neon); /* Bordo colorato in alto */
+            border-top: 3px solid var(--neon); 
             padding: 15px; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
             display: flex; flex-direction: column;
+            min-height: 300px; /* Altezza minima per uniformità */
         }
         h2 { color: var(--neon); font-size: 1.1rem; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; }
         
         .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #222; font-size: 0.85rem; }
         .label { color: #888; font-weight: bold; }
-        .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; }
+        .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; max-width: 60%; }
         
         /* Mappa */
         #map { 
-            height: 180px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); 
+            height: 200px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); 
             filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); 
         }
 
-        /* Badge di Avviso (VPN, AdBlock) */
+        /* Badge Avvisi */
         .badge-warn {
             background: rgba(255, 62, 62, 0.1); border: 1px solid var(--alert);
             color: var(--alert); padding: 5px; text-align: center; font-weight: bold; font-size: 0.75rem;
             margin-top: 5px; display: none;
         }
 
-        /* Forensic Report (Tabella Rossa) */
-        #forensic-report {
-            display: none; margin-top: 15px; border: 1px solid var(--alert); padding: 5px; background: rgba(255,0,0,0.05);
-        }
+        /* Zombie Audit */
+        .audit-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-top: 5px; background: #1a1a1a; padding: 4px; border-radius: 3px;}
+        
+        /* Report Forense */
+        #forensic-report { display: none; margin-top: 15px; border: 1px solid var(--alert); padding: 5px; background: rgba(255,0,0,0.05); }
         .rep-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; margin-top: 5px; }
         .rep-table th { text-align: left; color: var(--alert); border-bottom: 1px solid #444; }
         .rep-table td { color: #ccc; padding: 2px 0; }
-        
-        /* Zombie Audit */
-        .audit-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-top: 5px; background: #1a1a1a; padding: 4px; }
-        .detected { color: #00ff41; font-weight: bold; }
 
-        @keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+        @keyframes blink { 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
 
-<div id="trap-banner">⚠️ ACCESS DENIED BUT EXECUTED. PROTOCOL DOES NOT SUPPORT REFUSAL.</div>
-
-<div id="consent-modal">
-    <div class="modal-content">
-        <h2>🔒 Security Gateway</h2>
-        <p style="color:#aaa; line-height: 1.5;">
-            This system analyzes network telemetry and hardware signatures.<br><br>
-            Do you consent to sharing your <b>IP Address, Geolocation, and Device Fingerprint</b>?
-        </p>
-        <div class="btn-group">
-            <button class="btn-deny" onclick="triggerTrap()">NO, DENY ACCESS</button>
-            <button class="btn-accept" onclick="unlockSite()">YES, I CONSENT</button>
-        </div>
-    </div>
-</div>
-
-<div id="main-interface">
-    <div class="wrapper">
-        <header>
-            <h1 id="main-title">DIGITAL X-RAY v8.0</h1>
-            <div class="subtitle" id="main-sub">>>> WAITING FOR USER INPUT <<<</div>
-        </header>
-        
-        <div class="grid">
-            
-            <div class="card">
-                <h2>📡 Network Analysis</h2>
-                <div class="row"><span class="label">Public IP:</span> <span id="ip" class="val" style="color:var(--neon)">SCANNING...</span></div>
-                <div class="row"><span class="label">ISP / Org:</span> <span id="isp" class="val">...</span></div>
-                <div class="row"><span class="label">Location:</span> <span id="geo" class="val">...</span></div>
-                <div class="row"><span class="label">Timezone:</span> <span id="ip-tz" class="val">...</span></div>
-                
-                <div id="vpn-warn" class="badge-warn">⚠️ VPN DETECTED (Region Mismatch)</div>
-                <div id="map"></div>
-            </div>
-
-            <div class="card">
-                <h2>📱 Hardware Fingerprint</h2>
-                <div class="row"><span class="label">Device:</span> <span id="model" class="val">DETECTING...</span></div>
-                <div class="row"><span class="label">OS:</span> <span id="os" class="val"></span></div>
-                <div class="row"><span class="label">CPU Cores:</span> <span id="cpu" class="val"></span></div>
-                <div class="row"><span class="label">GPU:</span> <span id="gpu" class="val"></span></div>
-                <div class="row"><span class="label">Memory:</span> <span id="ram" class="val"></span></div>
-                <div class="row"><span class="label">Battery:</span> <span id="battery" class="val">N/A</span></div>
-            </div>
-
-            <div class="card">
-                <h2>🕵️ Browser & Privacy</h2>
-                <div class="row"><span class="label">Browser:</span> <span id="browser" class="val"></span></div>
-                <div class="row"><span class="label">Language:</span> <span id="lang" class="val"></span></div>
-                <div class="row"><span class="label">System Time:</span> <span id="sys-tz" class="val"></span></div>
-                <div class="row"><span class="label">Do Not Track:</span> <span id="dnt" class="val"></span></div>
-                
-                <div id="incognito-warn" class="badge-warn">🕵️ INCOGNITO MODE DETECTED</div>
-                <div id="adblock-warn" class="badge-warn">🚫 AD-BLOCKER ACTIVE</div>
-                
-                <div class="row" style="margin-top:10px; background:rgba(255,0,0,0.1);"><span class="label" style="color:var(--alert)">WebRTC Leak:</span> <span id="webrtc" class="val">...</span></div>
-            </div>
-
-            <div class="card">
-                <h2>🧬 Forensics & Zombies</h2>
-                <div class="row"><span class="label">Canvas ID:</span> <span id="fp" class="val" style="color:var(--alert)">WAITING...</span></div>
-                <div class="row"><span class="label">Audio ID:</span> <span id="audio-fp" class="val" style="color:var(--alert)">WAITING...</span></div>
-
-                <h3 style="font-size:0.8rem; color:#aaa; margin-top:15px; border-bottom:1px solid #333;">🧟 Zombie Storage Audit</h3>
-                <div class="audit-row"><span>🍪 Cookies:</span><span id="audit-cookie" style="color:#555">Clean</span></div>
-                <div class="audit-row"><span>📦 LocalStorage:</span><span id="audit-ls" style="color:#555">Clean</span></div>
-                <div class="audit-row"><span>🗄️ IndexedDB:</span><span id="audit-idb" style="color:#555">Clean</span></div>
-
-                <div id="forensic-report">
-                    <div style="color:var(--alert); font-weight:bold; text-align:center; font-size:0.75rem;">⚠️ DEVICE RE-IDENTIFIED (IP CHANGED)</div>
-                    <table class="rep-table">
-                        <tr><th>Data</th><th>Previous</th><th>Current</th></tr>
-                        <tr><td>Time</td><td id="old-time"></td><td id="new-time">Now</td></tr>
-                        <tr><td>IP</td><td id="old-ip"></td><td id="new-ip"></td></tr>
-                    </table>
-                </div>
-                 <div id="clean-msg" style="margin-top:10px; font-size:0.75rem; text-align:center; color:#555; display:none;">No prior correlation found.</div>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-<canvas id="canv" width="200" height="50" style="display:none;"></canvas>
+<div class="wrapper">
+    <header>
+        <h1>DIG
