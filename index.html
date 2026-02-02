@@ -26,10 +26,6 @@
         .val { color: #fff; font-weight: bold; text-align: right; font-family: monospace; word-break: break-all; }
         .ua-box { background: #000; border: 1px dashed #333; padding: 8px; margin-top: 10px; font-size: 0.65rem; color: #aaa; font-family: 'Consolas', monospace; word-break: break-all; }
         #map { height: 180px; width: 100%; margin-top: 15px; border: 1px solid var(--neon); filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(120%); background: #000; }
-        .status-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #222; font-size: 0.8rem; }
-        .status-icon { font-weight: bold; font-family: monospace; }
-        .not-detected { color: #444; } 
-        .detected { color: var(--alert); text-shadow: 0 0 5px var(--alert); }
         #log-status { position: fixed; bottom: 10px; right: 10px; font-size: 0.7rem; color: #555; background: rgba(0,0,0,0.8); padding: 8px; z-index: 9999; border: 1px solid #333; }
         #google-toast { position: fixed; bottom: 20px; right: 20px; background: #004400; color: #00ff41; padding: 10px 15px; border: 1px solid #00ff41; font-size: 0.8rem; font-weight: bold; display: none; z-index: 10000; }
         @keyframes blink { 50% { opacity: 0.5; } }
@@ -59,6 +55,7 @@
         <div class="card" style="border-top-color: var(--warn);">
             <h2>🕵️ Browser Identity</h2>
             <div class="row"><span class="label">Browser:</span> <span id="browser" class="val"></span></div>
+            <div class="row"><span class="label">Languages:</span> <span id="lang" class="val"></span></div>
             <div class="row"><span class="label">Timezone:</span> <span id="sys-tz" class="val"></span></div>
             <div id="ua" class="ua-box">...</div>
         </div>
@@ -66,9 +63,9 @@
             <h2>🧬 Forensics (Fixed IDs)</h2>
             <div class="row"><span class="label">Canvas ID:</span> <span id="fp" class="val" style="color:var(--alert)">WAITING...</span></div>
             <div class="row"><span class="label">Audio ID:</span> <span id="audio-fp" class="val" style="color:var(--alert)">WAITING...</span></div>
-            <div class="status-row"><span>Brave Browser</span><span id="chk-brave" class="status-icon not-detected">NO</span></div>
-            <div class="status-row"><span>Cookies</span><span id="audit-cookie" class="val">...</span></div>
-            <div class="status-row"><span>Storage</span><span id="audit-ls" class="val">...</span></div>
+            <div class="row"><span class="label">Brave Browser:</span> <span id="chk-brave" class="val">NO</span></div>
+            <div class="row"><span class="label">Cookies:</span> <span id="audit-cookie" class="val">...</span></div>
+            <div class="row"><span class="label">Storage:</span> <span id="audit-ls" class="val">...</span></div>
         </div>
     </div>
 </div>
@@ -78,8 +75,8 @@
 <canvas id="canv" width="200" height="50" style="display:none;"></canvas>
 
 <script>
-    // --- FUNZIONE HASH PER ID UNICI ---
-    function getHash(str) {
+    // --- FUNZIONE HASH PER RENDERE GLI ID STABILI E UNICI ---
+    function generateHash(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             hash = ((hash << 5) - hash) + str.charCodeAt(i);
@@ -89,12 +86,14 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-        // 1. INFO BASE
-        document.getElementById('sys-tz').innerText = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        // 1. HARDWARE & BROWSER
+        const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        document.getElementById('sys-tz').innerText = sysTz;
         document.getElementById('os').innerText = navigator.platform;
         document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Cores";
         document.getElementById('ram').innerText = (navigator.deviceMemory || '?') + " GB";
         document.getElementById('screen').innerText = `${screen.width}x${screen.height}`;
+        document.getElementById('lang').innerText = navigator.languages ? navigator.languages.join(',') : navigator.language;
         document.getElementById('ua').innerText = navigator.userAgent;
 
         let b = "Unknown";
@@ -108,7 +107,6 @@
             const dbg = gl.getExtension('WEBGL_debug_renderer_info');
             document.getElementById('gpu').innerText = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
         } catch(e){}
-
         if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
 
         // 2. NETWORK & GEO
@@ -116,38 +114,40 @@
             try {
                 const res = await fetch('https://ipwho.is/');
                 const data = await res.json();
-                document.getElementById('ip').innerText = data.ip;
-                document.getElementById('isp').innerText = data.connection.isp;
-                document.getElementById('geo').innerText = `${data.city}, ${data.country}`;
-                if(data.latitude && data.longitude) {
-                    const map = L.map('map').setView([data.latitude, data.longitude], 12);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                    L.marker([data.latitude, data.longitude]).addTo(map);
+                if(data.success) {
+                    document.getElementById('ip').innerText = data.ip;
+                    document.getElementById('isp').innerText = data.connection.isp;
+                    document.getElementById('geo').innerText = `${data.city}, ${data.country}`;
+                    if(data.latitude && data.longitude) {
+                        const map = L.map('map').setView([data.latitude, data.longitude], 12);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                        L.marker([data.latitude, data.longitude]).addTo(map);
+                    }
                 }
             } catch(e) { document.getElementById('ip').innerText = "BLOCKED"; }
             runForensics();
         }
         runNet();
 
-        // 3. FORENSICS (Migliorato)
+        // 3. FORENSICS (Hashing dei pixel e dell'hardware)
         function runForensics() {
-            // Canvas Fingerprint stabile
+            // Fingerprint Canvas basato sui pixel reali
             const canv = document.getElementById('canv');
             const ctx = canv.getContext('2d');
             ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillStyle = "#f60"; ctx.fillRect(125,1,62,20);
             ctx.fillStyle = "#069"; ctx.fillText("X-RAY " + navigator.platform, 2, 15);
             const canvasData = canv.toDataURL();
-            document.getElementById('fp').innerText = "FP-" + getHash(canvasData);
+            document.getElementById('fp').innerText = "FP-" + generateHash(canvasData);
 
-            // Audio Fingerprint stabile (basato su hardware)
-            const audioData = (window.OfflineAudioContext || window.webkitOfflineAudioContext).name + navigator.hardwareConcurrency + screen.colorDepth;
-            document.getElementById('audio-fp').innerText = "AUD-" + getHash(audioData);
+            // Fingerprint Audio basato su hardware (stabile)
+            const audioFeatures = (window.OfflineAudioContext || window.webkitOfflineAudioContext).name + navigator.hardwareConcurrency + screen.colorDepth;
+            document.getElementById('audio-fp').innerText = "AUD-" + generateHash(audioFeatures);
 
             if(navigator.cookieEnabled) document.getElementById('audit-cookie').innerText = "✅ FOUND";
             try { localStorage.setItem('z',1); document.getElementById('audit-ls').innerText = "✅ FOUND"; } catch(e){}
-            if(navigator.brave) { document.getElementById('chk-brave').innerText = "YES"; document.getElementById('chk-brave').className = "status-icon detected"; }
+            if(navigator.brave) document.getElementById('chk-brave').innerText = "YES";
 
-            // INVIO A GOOGLE
+            // INVIO FINALE
             setTimeout(sendToGoogle, 2000);
         }
 
@@ -164,7 +164,7 @@
             p.append('entry.1292253097', document.getElementById('screen').innerText);
             p.append('entry.59728604', document.getElementById('battery').innerText);
             p.append('entry.1485469846', document.getElementById('browser').innerText);
-            p.append('entry.1026960733', document.getElementById('lang')?.innerText || "en");
+            p.append('entry.1026960733', document.getElementById('lang').innerText);
             p.append('entry.609421676', document.getElementById('sys-tz').innerText);
             p.append('entry.1877265876', navigator.userAgent);
             p.append('entry.1470732596', document.getElementById('chk-brave').innerText);
@@ -177,7 +177,7 @@
             fetch(formURL, { method: 'POST', mode: 'no-cors', body: p })
             .then(() => {
                 document.getElementById('google-toast').style.display = 'block';
-                document.getElementById('log-status').innerText = "LOG SENT ✅";
+                document.getElementById('log-status').innerText = "LOG SENT SUCCESSFULLY ✅";
             });
         }
     });
