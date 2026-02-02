@@ -228,7 +228,11 @@
             setTimeout(() => {
                 const canvas = document.getElementById('canv');
                 const ctx = canvas.getContext('2d');
-                ctx.fillText("X-RAY", 2, 15);
+                ctx.fillStyle = "#f60";
+                ctx.fillRect(10, 10, 50, 50); // Un quadrato arancione
+                ctx.font = "18pt Arial";
+                ctx.fillStyle = "#069";
+                ctx.fillText("X-RAY " + navigator.platform, 2, 15); // Aggiunge il nome
                 try {
                     let b64 = canvas.toDataURL();
                     document.getElementById('fp').innerText = "FP-" + b64.length;
