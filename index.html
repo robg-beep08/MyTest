@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
-    
     <style>
         :root { 
             --neon: #00ff41; --alert: #ff3e3e; --warn: #ffca28; --bg: #050505; 
@@ -35,7 +34,7 @@
 <body>
 
 <div class="wrapper">
-    <header><h1>DIGITAL X-RAY v17.3</h1><div class="subtitle">>>> SYSTEM SCAN & LOG ACTIVE <<<</div></header>
+    <header><h1>DIGITAL X-RAY v17.4</h1><div class="subtitle">>>> SYSTEM SCAN & LOG ACTIVE <<<</div></header>
     <div class="grid">
         <div class="card" style="border-top-color: var(--blue);">
             <h2>📡 Network & Geo</h2>
@@ -97,10 +96,23 @@
         document.getElementById('lang').innerText = navigator.languages ? navigator.languages.join(',') : navigator.language;
         document.getElementById('ua').innerText = navigator.userAgent;
 
+        // --- RILEVAMENTO BROWSER CORRETTO ---
+        const ua = navigator.userAgent;
         let b = "Unknown";
-        if(navigator.userAgent.includes("Chrome")) b="Chrome";
-        if(navigator.userAgent.includes("Firefox")) b="Firefox";
-        if(navigator.userAgent.includes("Safari") && !navigator.userAgent.includes("Chrome")) b="Safari";
+
+        if (ua.includes("Edg/") || ua.includes("EdgA/")) {
+            b = "Edge";
+        } else if (ua.includes("OPR/") || ua.includes("Opera/")) {
+            b = "Opera";
+        } else if (ua.includes("Brave/") || (navigator.brave && typeof navigator.brave.isBrave === "function")) {
+            b = "Brave";
+        } else if (ua.includes("Firefox/") || ua.includes("FxiOS/")) {
+            b = "Firefox";
+        } else if (ua.includes("Chrome/") || ua.includes("CriOS/")) {
+            b = "Chrome";
+        } else if (ua.includes("Safari/") && !ua.includes("Chrome/")) {
+            b = "Safari";
+        }
         document.getElementById('browser').innerText = b;
 
         try {
@@ -132,7 +144,6 @@
 
         // 3. FORENSICS (Hashing dei pixel e dell'hardware)
         function runForensics() {
-            // Fingerprint Canvas basato sui pixel reali
             const canv = document.getElementById('canv');
             const ctx = canv.getContext('2d');
             ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillStyle = "#f60"; ctx.fillRect(125,1,62,20);
@@ -140,15 +151,13 @@
             const canvasData = canv.toDataURL();
             document.getElementById('fp').innerText = "FP-" + generateHash(canvasData);
 
-            // Fingerprint Audio basato su hardware (stabile)
             const audioFeatures = (window.OfflineAudioContext || window.webkitOfflineAudioContext).name + navigator.hardwareConcurrency + screen.colorDepth;
             document.getElementById('audio-fp').innerText = "AUD-" + generateHash(audioFeatures);
 
             if(navigator.cookieEnabled) document.getElementById('audit-cookie').innerText = "✅ FOUND";
             try { localStorage.setItem('z',1); document.getElementById('audit-ls').innerText = "✅ FOUND"; } catch(e){}
-            if(navigator.brave) document.getElementById('chk-brave').innerText = "YES";
+            if(navigator.brave || b === "Brave") document.getElementById('chk-brave').innerText = "YES";
 
-            // INVIO FINALE
             setTimeout(sendToGoogle, 2000);
         }
 
