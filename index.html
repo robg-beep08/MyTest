@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital X-RAY | Bulletproof v17.4</title>
+    <title>Digital X-RAY | Bulletproof v17.5</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
@@ -34,7 +34,7 @@
 <body>
 
 <div class="wrapper">
-    <header><h1>DIGITAL X-RAY v17.4</h1><div class="subtitle">>>> SYSTEM SCAN & LOG ACTIVE <<<</div></header>
+    <header><h1>DIGITAL X-RAY v17.5</h1><div class="subtitle">>>> APPLE OPTIMIZED SCAN ACTIVE <<<</div></header>
     <div class="grid">
         <div class="card" style="border-top-color: var(--blue);">
             <h2>📡 Network & Geo</h2>
@@ -75,7 +75,6 @@
 <canvas id="canv" width="200" height="50" style="display:none;"></canvas>
 
 <script>
-    // --- FUNZIONE HASH PER RENDERE GLI ID STABILI E UNICI ---
     function generateHash(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -87,50 +86,62 @@
 
     window.addEventListener('DOMContentLoaded', () => {
         // 1. HARDWARE & BROWSER
-        const sysTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        document.getElementById('sys-tz').innerText = sysTz;
+        document.getElementById('sys-tz').innerText = Intl.DateTimeFormat().resolvedOptions().timeZone;
         document.getElementById('os').innerText = navigator.platform;
         document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Cores";
-        document.getElementById('ram').innerText = (navigator.deviceMemory || '?') + " GB";
         document.getElementById('screen').innerText = `${screen.width}x${screen.height}`;
         document.getElementById('lang').innerText = navigator.languages ? navigator.languages.join(',') : navigator.language;
         document.getElementById('ua').innerText = navigator.userAgent;
 
-        // --- RILEVAMENTO BROWSER CORRETTO ---
-        const ua = navigator.userAgent;
-        let b = "Unknown";
-
-        if (ua.includes("Edg/") || ua.includes("EdgA/")) {
-            b = "Edge";
-        } else if (ua.includes("OPR/") || ua.includes("Opera/")) {
-            b = "Opera";
-        } else if (ua.includes("Brave/") || (navigator.brave && typeof navigator.brave.isBrave === "function")) {
-            b = "Brave";
-        } else if (ua.includes("Firefox/") || ua.includes("FxiOS/")) {
-            b = "Firefox";
-        } else if (ua.includes("Chrome/") || ua.includes("CriOS/")) {
-            b = "Chrome";
-        } else if (ua.includes("Safari/") && !ua.includes("Chrome/")) {
-            b = "Safari";
-        }
-        document.getElementById('browser').innerText = b;
-
+        // GPU RENDERER
+        let gpuRenderer = "Generic";
         try {
             const gl = document.createElement('canvas').getContext('webgl');
             const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-            document.getElementById('gpu').innerText = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
+            gpuRenderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
+            document.getElementById('gpu').innerText = gpuRenderer;
         } catch(e){}
+
+        // STIMA RAM PER IOS (Safari workaround)
+        let ramVal = navigator.deviceMemory;
+        if (!ramVal && (navigator.platform === 'iPhone' || navigator.platform === 'iPad')) {
+            if (gpuRenderer.includes("Apple A15") || gpuRenderer.includes("Apple A16") || gpuRenderer.includes("Apple A17")) ramVal = "6";
+            else if (gpuRenderer.includes("Apple A14") || gpuRenderer.includes("Apple A13")) ramVal = "4";
+            else ramVal = "3-4 (Stima)";
+        }
+        document.getElementById('ram').innerText = (ramVal || '?') + " GB";
+
+        // RILEVAMENTO BROWSER (v17.4 logic)
+        const ua = navigator.userAgent;
+        let b = "Unknown";
+        if (ua.includes("Edg/") || ua.includes("EdgA/")) b = "Edge";
+        else if (ua.includes("OPR/") || ua.includes("Opera/")) b = "Opera";
+        else if (ua.includes("Brave/") || (navigator.brave && typeof navigator.brave.isBrave === "function")) b = "Brave";
+        else if (ua.includes("Firefox/") || ua.includes("FxiOS/")) b = "Firefox";
+        else if (ua.includes("Chrome/") || ua.includes("CriOS/")) b = "Chrome";
+        else if (ua.includes("Safari/") && !ua.includes("Chrome/")) b = "Safari";
+        document.getElementById('browser').innerText = b;
+
         if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
 
-        // 2. NETWORK & GEO
+        // 2. NETWORK & GEO (VPN/Private Relay Detection)
         async function runNet() {
             try {
                 const res = await fetch('https://ipwho.is/');
                 const data = await res.json();
                 if(data.success) {
-                    document.getElementById('ip').innerText = data.ip;
+                    let ipDisplay = data.ip;
+                    // Rilevamento Apple Private Relay o VPN
+                    if (data.connection.asn === 714 || data.connection.org.includes("Apple")) {
+                        ipDisplay += " (Private Relay 🛡️)";
+                    } else if (data.security.is_vpn) {
+                        ipDisplay += " (VPN 🛰️)";
+                    }
+                    
+                    document.getElementById('ip').innerText = ipDisplay;
                     document.getElementById('isp').innerText = data.connection.isp;
                     document.getElementById('geo').innerText = `${data.city}, ${data.country}`;
+                    
                     if(data.latitude && data.longitude) {
                         const map = L.map('map').setView([data.latitude, data.longitude], 12);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -142,7 +153,7 @@
         }
         runNet();
 
-        // 3. FORENSICS (Hashing dei pixel e dell'hardware)
+        // 3. FORENSICS
         function runForensics() {
             const canv = document.getElementById('canv');
             const ctx = canv.getContext('2d');
