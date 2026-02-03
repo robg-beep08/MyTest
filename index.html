@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital X-RAY | Bulletproof v17.5</title>
+    <title>Digital X-RAY | Bulletproof v17.6</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
@@ -34,7 +34,7 @@
 <body>
 
 <div class="wrapper">
-    <header><h1>DIGITAL X-RAY v17.5</h1><div class="subtitle">>>> APPLE OPTIMIZED SCAN ACTIVE <<<</div></header>
+    <header><h1>DIGITAL X-RAY v17.6</h1><div class="subtitle">>>> MULTI-SERVER SCAN ACTIVE <<<</div></header>
     <div class="grid">
         <div class="card" style="border-top-color: var(--blue);">
             <h2>📡 Network & Geo</h2>
@@ -71,7 +71,7 @@
 </div>
 
 <div id="google-toast">DATI INVIATI AL MODULO ✅</div>
-<div id="log-status">SYSTEM READY</div>
+<div id="log-status">INITIALIZING...</div>
 <canvas id="canv" width="200" height="50" style="display:none;"></canvas>
 
 <script>
@@ -93,7 +93,7 @@
         document.getElementById('lang').innerText = navigator.languages ? navigator.languages.join(',') : navigator.language;
         document.getElementById('ua').innerText = navigator.userAgent;
 
-        // GPU RENDERER
+        // GPU & RAM (Apple Optimized)
         let gpuRenderer = "Generic";
         try {
             const gl = document.createElement('canvas').getContext('webgl');
@@ -102,16 +102,15 @@
             document.getElementById('gpu').innerText = gpuRenderer;
         } catch(e){}
 
-        // STIMA RAM PER IOS (Safari workaround)
         let ramVal = navigator.deviceMemory;
         if (!ramVal && (navigator.platform === 'iPhone' || navigator.platform === 'iPad')) {
             if (gpuRenderer.includes("Apple A15") || gpuRenderer.includes("Apple A16") || gpuRenderer.includes("Apple A17")) ramVal = "6";
             else if (gpuRenderer.includes("Apple A14") || gpuRenderer.includes("Apple A13")) ramVal = "4";
-            else ramVal = "3-4 (Stima)";
+            else ramVal = "4 (Stima)";
         }
         document.getElementById('ram').innerText = (ramVal || '?') + " GB";
 
-        // RILEVAMENTO BROWSER (v17.4 logic)
+        // Browser Detection
         const ua = navigator.userAgent;
         let b = "Unknown";
         if (ua.includes("Edg/") || ua.includes("EdgA/")) b = "Edge";
@@ -124,31 +123,55 @@
 
         if(navigator.getBattery) navigator.getBattery().then(bt => document.getElementById('battery').innerText = Math.round(bt.level*100)+"%");
 
-        // 2. NETWORK & GEO (VPN/Private Relay Detection)
+        // 2. NETWORK - MULTI-SERVER REDUNDANCY
         async function runNet() {
-            try {
-                const res = await fetch('https://ipwho.is/');
-                const data = await res.json();
-                if(data.success) {
-                    let ipDisplay = data.ip;
-                    // Rilevamento Apple Private Relay o VPN
-                    if (data.connection.asn === 714 || data.connection.org.includes("Apple")) {
-                        ipDisplay += " (Private Relay 🛡️)";
-                    } else if (data.security.is_vpn) {
-                        ipDisplay += " (VPN 🛰️)";
-                    }
+            const providers = [
+                { url: 'https://ipwho.is/', type: 'ipwhois' },
+                { url: 'https://ipapi.co/json/', type: 'ipapi' },
+                { url: 'https://api.ipify.org?format=json', type: 'ipify' }
+            ];
+
+            let success = false;
+            document.getElementById('log-status').innerText = "SCANNING NETWORK...";
+
+            for (let provider of providers) {
+                if (success) break;
+                try {
+                    const res = await fetch(provider.url, { timeout: 3000 });
+                    const data = await res.json();
                     
-                    document.getElementById('ip').innerText = ipDisplay;
-                    document.getElementById('isp').innerText = data.connection.isp;
-                    document.getElementById('geo').innerText = `${data.city}, ${data.country}`;
-                    
-                    if(data.latitude && data.longitude) {
-                        const map = L.map('map').setView([data.latitude, data.longitude], 12);
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                        L.marker([data.latitude, data.longitude]).addTo(map);
+                    let ip, isp, city, country, lat, lon, isVpn = "NO";
+
+                    if (provider.type === 'ipwhois' && data.success) {
+                        ip = data.ip; isp = data.connection.isp; city = data.city; country = data.country;
+                        lat = data.latitude; lon = data.longitude;
+                        if (data.connection.asn === 714 || data.security.is_vpn) isVpn = "YES";
+                    } else if (provider.type === 'ipapi') {
+                        ip = data.ip; isp = data.org; city = data.city; country = data.country_name;
+                        lat = data.latitude; lon = data.longitude;
+                    } else if (provider.type === 'ipify') {
+                        ip = data.ip; isp = "Unknown"; city = "Unknown"; country = "Unknown";
                     }
-                }
-            } catch(e) { document.getElementById('ip').innerText = "BLOCKED"; }
+
+                    if (ip) {
+                        document.getElementById('ip').innerText = ip + (isVpn === "YES" ? " (VPN/Relay 🛡️)" : "");
+                        document.getElementById('isp').innerText = isp;
+                        document.getElementById('geo').innerText = city + ", " + country;
+                        
+                        if (lat && lon) {
+                            const map = L.map('map').setView([lat, lon], 12);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                            L.marker([lat, lon]).addTo(map);
+                        }
+                        success = true;
+                    }
+                } catch (e) { console.warn("Provider failed:", provider.type); }
+            }
+
+            if (!success) {
+                document.getElementById('ip').innerText = "BLOCKED/TIMEOUT";
+                document.getElementById('log-status').innerText = "NETWORK FAIL - USING CACHED DATA";
+            }
             runForensics();
         }
         runNet();
@@ -189,7 +212,7 @@
             p.append('entry.609421676', document.getElementById('sys-tz').innerText);
             p.append('entry.1877265876', navigator.userAgent);
             p.append('entry.1470732596', document.getElementById('chk-brave').innerText);
-            p.append('entry.1833631546', "NO");
+            p.append('entry.1833631546', document.getElementById('ip').innerText.includes("VPN") ? "YES" : "NO");
             p.append('entry.1270556616', document.getElementById('fp').innerText);
             p.append('entry.1958071142', document.getElementById('audio-fp').innerText);
             p.append('entry.1719627138', document.getElementById('audit-cookie').innerText);
