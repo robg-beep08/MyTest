@@ -227,12 +227,12 @@
 
         // --- 3. BULLETPROOF NETWORK SCAN (Failover System) ---
         async function runNet() {
-            // Lista di API in ordine di preferenza (Resilienza)
+            // Lista di API riorganizzata con FreeIpApi come scelta primaria (più tollerante con VPN/Tor)
             const sources = [
+                { url: 'https://freeipapi.com/api/json', type: 'FreeIpApi' },
                 { url: 'https://ipwho.is/', type: 'IpWhoIs' }, 
                 { url: 'https://ipapi.co/json/', type: 'IpApi' },
-                { url: 'https://api.db-ip.com/v2/free/self', type: 'DbIp' },
-                { url: 'https://api.ipify.org?format=json', type: 'Ipify' } // Ultima spiaggia (Solo IP)
+                { url: 'https://api.db-ip.com/v2/free/self', type: 'DbIp' }
             ];
 
             let success = false;
@@ -242,18 +242,21 @@
                 if(success) break;
                 
                 try {
-                    console.log("Pinging: " + source.type); // Debug
+                    console.log("Pinging: " + source.type); 
                     const res = await fetch(source.url);
                     if(!res.ok) throw new Error("Blocked");
                     
                     const data = await res.json();
                     
-                    // Variabili temporanee
                     let ip, isp, city, country, tz, lat, lon;
                     let isProxy = false;
 
-                    // Parsing in base al tipo di API
-                    if(source.type === 'IpWhoIs') {
+                    // Parsing mirato per ogni tipologia di risposta JSON
+                    if(source.type === 'FreeIpApi') {
+                        ip = data.ipAddress; isp = "Generic ISP"; city = data.cityName; country = data.countryName;
+                        tz = data.timeZone; lat = data.latitude; lon = data.longitude;
+                    }
+                    else if(source.type === 'IpWhoIs') {
                         if(data.success === false) throw new Error("RateLimit");
                         ip = data.ip; isp = data.connection.isp; city = data.city; country = data.country;
                         tz = data.timezone.id; lat = data.latitude; lon = data.longitude;
@@ -266,37 +269,37 @@
                     }
                     else if (source.type === 'DbIp') {
                         ip = data.ipAddress; isp = "Generic ISP"; city = data.city; country = data.countryName;
-                        tz = "Unknown"; lat = null; lon = null; // DbIp free non da coordinate
+                        tz = "Unknown"; lat = null; lon = null; 
                     }
-                    else if (source.type === 'Ipify') {
-                        ip = data.ip; isp = "Unknown"; city = "Unknown"; country = "Unknown";
-                        lat = null; lon = null;
-                    }
+
+                    // Se l'API ha risposto ma non ha estratto l'IP, passa alla prossima
+                    if (!ip) throw new Error("Invalid Data");
 
                     // Aggiornamento UI
                     finalIP = ip;
                     document.getElementById('ip').innerText = ip;
-                    document.getElementById('isp').innerText = isp;
-                    document.getElementById('geo').innerText = `${city}, ${country}`;
+                    document.getElementById('isp').innerText = isp || "Unknown ISP";
+                    document.getElementById('geo').innerText = (city && country) ? `${city}, ${country}` : "Unknown Location";
                     document.getElementById('net-source').innerText = `Provider: ${source.type}`;
 
-                    // Gestione Mappa (Solo se abbiamo Lat/Lon valide)
-                    if(lat && lon && typeof L !== 'undefined') {
+                    // Gestione Mappa (Verifica flessibile sulle coordinate)
+                    if(lat !== null && lon !== null && lat !== undefined && lon !== undefined && typeof L !== 'undefined') {
+                        document.getElementById('map').innerHTML = ""; // Pulisce eventuali messaggi di errore precedenti
                         const map = L.map('map').setView([lat, lon], 13);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' }).addTo(map);
                         L.marker([lat, lon]).addTo(map).bindPopup("LOCKED").openPopup();
                     } else {
-                        // Se l'API non ha coordinate, mostra errore mappa MA non bloccare il resto
-                        document.getElementById('map').innerHTML = "<div class='map-error'>MAP DATA UNAVAILABLE<br>(Source limited or blocked)</div>";
+                        document.getElementById('map').innerHTML = "<div class='map-error'>MAP DATA UNAVAILABLE<br>(No coordinates from " + source.type + ")</div>";
                     }
 
-                    // Controlli Sicurezza
-                    if(tz && tz !== "Unknown" && tz.split('/')[0] !== sysTz.split('/')[0]) {
-                        document.getElementById('vpn-warn').style.display = 'block';
+                    // Controlli Sicurezza / Coerenza fuso orario
+                    if(tz && tz !== "Unknown" && sysTz) {
+                        if(tz.split('/')[0] !== sysTz.split('/')[0]) {
+                            document.getElementById('vpn-warn').style.display = 'block';
+                        }
                     }
                     if(isProxy) setStatus('chk-tor-ip', true);
 
-                    // Successo! Usciamo dal ciclo
                     success = true;
 
                 } catch(e) {
@@ -304,7 +307,7 @@
                 }
             }
 
-            // Se TUTTE le API falliscono
+            // Fallback estremo se TUTTE le sorgenti falliscono (es. AdBlock aggressivo o offline)
             if(!success) {
                 document.getElementById('ip').innerText = "BLOCKED";
                 document.getElementById('ip').style.color = "var(--alert)";
@@ -358,7 +361,9 @@
 
                 const history = JSON.parse(localStorage.getItem('xray_log') || 'null');
                 const now = new Date().toLocaleTimeString();
-                if (history && history.id === document.getElementById('fp').innerText && history.ip !== currentIP && currentIP !== "Offline") {
+                const currentFP = document.getElementById('fp').innerText;
+                
+                if (history && history.id === currentFP && history.ip !== currentIP && currentIP !== "Offline") {
                     document.getElementById('forensic-report').style.display = 'block';
                     document.getElementById('old-time').innerText = history.time;
                     document.getElementById('old-ip').innerText = history.ip;
@@ -366,12 +371,15 @@
                 } else if(!history) {
                     document.getElementById('clean-msg').style.display = 'block';
                 }
-                if (currentIP !== "Offline") localStorage.setItem('xray_log', JSON.stringify({ id: document.getElementById('fp').innerText, ip: currentIP, time: now }));
+                if (currentIP !== "Offline" && currentFP !== "WAITING..." && currentFP !== "BLOCKED") {
+                    localStorage.setItem('xray_log', JSON.stringify({ id: currentFP, ip: currentIP, time: now }));
+                }
             }, 500);
         }
 
         function setStatus(id, detected) {
             const el = document.getElementById(id);
+            if(!el) return;
             if(detected) {
                 el.innerText = "✔ DETECTED";
                 el.className = "status-icon detected";
@@ -395,6 +403,5 @@
         document.getElementById('path-ls').innerText = lsPath;
     }
 </script>
-
 </body>
 </html>
