@@ -178,7 +178,7 @@
         else if (ua.includes("Firefox/")) b = "Firefox";
         document.getElementById('browser').innerText = b;
 
-        // --- 2. NETWORK (Failover Integrato) ---
+        // --- 2. NETWORK (Con Timeout Forzato a 3 Secondi) ---
         async function runNet() {
             const sources = [
                 { url: 'https://freeipapi.com/api/json', type: 'FreeIpApi' },
@@ -191,9 +191,19 @@
 
             for (const source of sources) {
                 if(success) break;
+
+                // Creiamo un meccanismo di ABORT per forzare il timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000); // 3000ms = 3 secondi max
+
                 try {
-                    const res = await fetch(source.url);
-                    if(!res.ok) throw new Error("Blocked");
+                    console.log("Tentativo con: " + source.type);
+                    
+                    // Passiamo il segnale di abort al fetch
+                    const res = await fetch(source.url, { signal: controller.signal });
+                    clearTimeout(timeoutId); // Se risponde in tempo, cancelliamo il timer di emergenza
+                    
+                    if(!res.ok) throw new Error("HTTP Error " + res.status);
                     const data = await res.json();
                     
                     let ip, isp, city, country, lat, lon;
@@ -225,7 +235,7 @@
                     document.getElementById('geo').innerText = (city && country) ? `${city}, ${country}` : "N/A";
                     
                     // Renderizzazione Mappa
-                    if (lat && lon && typeof L !== 'undefined') {
+                    if (lat !== null && lon !== null && lat !== undefined && lon !== undefined && typeof L !== 'undefined') {
                         document.getElementById('map').innerHTML = ""; 
                         const map = L.map('map', {zoomControl: false}).setView([lat, lon], 11);
                         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -236,12 +246,15 @@
                         document.getElementById('map').innerHTML = "<div style='padding:20px; text-align:center; color:var(--text-muted); font-size:0.8rem;'>Mappa non disponibile (Coordinate assenti)</div>";
                     }
 
-                    success = true;
+                    success = true; // Abbassiamo la flag di successo per interrompere il ciclo
                 } catch (e) {
-                    console.log(`${source.type} fallito: ${e.message}`);
+                    clearTimeout(timeoutId); // Prevenzione memory leak se fallisce per altri motivi
+                    console.log(`${source.type} fallito o timed out: ${e.message}`);
+                    // Se l'errore è causato dall'abort, e.name sarà "AbortError"
                 }
             }
 
+            // Se TUTTI i tentativi falliscono (o vanno in timeout) entro i 12 secondi totali (3s x 4)
             if (!success) {
                 document.getElementById('ip').innerText = "Blocked/Error";
                 document.getElementById('isp').innerText = "N/A";
@@ -249,7 +262,7 @@
                 document.getElementById('map').innerHTML = "<div style='padding:20px; text-align:center; color:var(--alert); font-size:0.8rem;'>Connessione API fallita (AdBlock attivo)</div>";
             }
             
-            // Esegue l'analisi forense e prepara la spedizione
+            // Ora l'analisi forense e l'invio partiranno SEMPRE e in tempi brevi
             runForensics();
         }
         runNet();
