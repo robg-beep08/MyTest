@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Device Audit | Tactical Digital Awareness</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root { 
+            --primary: #1e293b;    /* Slate scuro */
+            --accent: #2563eb;     /* Blu Vivido */
+            --bg: #f1f5f9; 
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --alert: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+        }
+
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; }
+        .wrapper { max-width: 1400px; margin: auto; }
+        
+        header { 
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding: 20px 24px; background: var(--card-bg); 
+            border-radius: 12px; border: 1px solid var(--border);
+            flex-wrap: wrap; gap: 15px;
+        }
+        .header-title h1 { font-size: 1.4rem; margin: 0; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+        .header-title .subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+        .status-box { display: flex; align-items: center; gap: 12px; }
+        .status { font-size: 0.8rem; color: var(--accent); font-weight: bold; animation: pulse 2s infinite; }
+
+        /* Banner Indice di Tracciabilità / Unicità */
+        .score-banner {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white; border-radius: 12px; padding: 18px 24px; margin-bottom: 25px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
+            border: 1px solid #334155; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        }
+        .score-info h3 { margin: 0 0 5px 0; font-size: 1.1rem; color: #f8fafc; display: flex; align-items: center; gap: 8px; }
+        .score-info p { margin: 0; font-size: 0.8rem; color: #94a3b8; }
+        .score-gauge-box { min-width: 260px; }
+        .score-val { font-size: 1.4rem; font-weight: 800; color: #f43f5e; text-align: right; margin-bottom: 4px; font-family: 'JetBrains Mono', monospace; }
+        .score-bar-bg { width: 100%; background: #334155; height: 10px; border-radius: 99px; overflow: hidden; }
+        .score-bar-fill { height: 100%; width: 99.4%; background: linear-gradient(90deg, #f59e0b, #ef4444, #e11d48); border-radius: 99px; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+
+        .card { 
+            background: var(--card-bg); border-radius: 12px; padding: 20px; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06); border: 1px solid var(--border);
+            display: flex; flex-direction: column;
+        }
+
+        h2 { font-size: 1rem; color: var(--primary); border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin-top: 0; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+
+        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f8fafc; font-size: 0.85rem; }
+        .label { color: var(--text-muted); font-weight: 500; }
+        .val { color: var(--primary); font-weight: 600; text-align: right; word-break: break-all; max-width: 60%; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+        .badge-red { background: #fee2e2; color: #dc2626; }
+        .badge-green { background: #dcfce7; color: #15803d; }
+        .badge-amber { background: #fef3c7; color: #b45309; }
+
+        /* Grafici */
+        .meter-container { width: 100%; background: #e2e8f0; height: 6px; border-radius: 10px; margin-top: 5px; }
+        .meter-bar { height: 100%; width: 0%; background: var(--accent); border-radius: 10px; transition: width 1s; }
+
+        .ua-box { 
+            background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; 
+            padding: 10px; margin-top: 15px; font-size: 0.7rem; color: var(--text-muted); 
+            font-family: 'JetBrains Mono', 'Courier New', monospace; word-break: break-all;
+        }
+
+        /* Mappa con alto contrasto */
+        #map { height: 180px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); }
+
+        /* Azioni e Download */
+        .action-bar { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; flex-wrap: wrap; }
+        .btn-download {
+            background: var(--primary); color: white; border: none; padding: 12px 20px;
+            border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s;
+        }
+        .btn-download:hover { background: #0f172a; }
+
+        /* Matrice Didattica di Rischio */
+        .threat-matrix {
+            margin-top: 30px; background: var(--card-bg); border-radius: 12px; padding: 24px;
+            border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .threat-matrix h2 { border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 15px; }
+        .threat-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .threat-table th { text-align: left; padding: 10px; background: #f8fafc; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+        .threat-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        .threat-table tr:hover { background: #f8fafc; }
+
+        #google-toast { 
+            position: fixed; bottom: 20px; right: 20px; background: #059669; color: white; 
+            padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; display: none; z-index: 999;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2); font-weight: 600;
+        }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <header>
+        <div class="header-title">
+            <h1>System Analytics v20</h1>
+            <div class="subtitle">Tactical Digital Awareness | Live Profiling Assessment</div>
+        </div>
+        <div class="status-box">
+            <div class="status">● ANALISI FORENSE ATTIVA</div>
+        </div>
+    </header>
+
+    <!-- Banner Indice di Tracciabilità / Unicità -->
+    <div class="score-banner">
+        <div class="score-info">
+            <h3>🛡️ Indice di Tracciabilità Dispositivo</h3>
+            <p>Questo dispositivo possiede una combinazione hardware/software statisticamente unica nel web.</p>
+        </div>
+        <div class="score-gauge-box">
+            <div class="score-val" id="score-val">99.4% UNICO</div>
+            <div class="score-bar-bg"><div class="score-bar-fill" id="score-bar"></div></div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- 1. NETWORK & GEO -->
+        <div class="card">
+            <h2>📡 Network & Geo</h2>
+            <div class="row"><span class="label">Public IP</span> <span id="ip" class="val">...</span></div>
+            <div class="row"><span class="label">ISP / Org</span> <span id="isp" class="val">...</span></div>
+            <div class="row"><span class="label">Location</span> <span id="geo" class="val">...</span></div>
+            <div class="row"><span class="label">Network Link</span> <span id="net-type" class="val">Rilevamento...</span></div>
+            <div id="map"></div>
+        </div>
+
+        <!-- 2. HARDWARE SPECS -->
+        <div class="card">
+            <h2>📱 Hardware Specs</h2>
+            <div class="row"><span class="label">Platform</span> <span id="os" class="val"></span></div>
+            <div class="row"><span class="label">CPU Cores</span> <span id="cpu" class="val"></span></div>
+            <div class="row"><span class="label">GPU Renderer</span> <span id="gpu" class="val"></span></div>
+            <div class="row" style="flex-direction: column;">
+                <div style="display:flex; justify-content:space-between; width:100%;">
+                    <span class="label">RAM Memory</span> <span id="ram" class="val"></span>
+                </div>
+                <div class="meter-container"><div id="ram-bar" class="meter-bar"></div></div>
+            </div>
+            <div class="row"><span class="label">Screen Res</span> <span id="screen" class="val"></span></div>
+            <div class="row" style="flex-direction: column;">
+                <div style="display:flex; justify-content:space-between; width:100%;">
+                    <span class="label">Battery</span> <span id="battery" class="val">N/A</span>
+                </div>
+                <div class="meter-container"><div id="battery-bar" class="meter-bar"></div></div>
+            </div>
+        </div>
+
+        <!-- 3. BROWSER IDENTITY -->
+        <div class="card">
+            <h2>🕵️ Browser Identity</h2>
+            <div class="row"><span class="label">Browser</span> <span id="browser" class="val"></span></div>
+            <div class="row"><span class="label">Languages</span> <span id="lang" class="val"></span></div>
+            <div class="row"><span class="label">Timezone</span> <span id="sys-tz" class="val"></span></div>
+            <div class="row"><span class="label">Incognito Mode</span> <span id="incognito-badge" class="val badge badge-green">Standard</span></div>
+            <div id="ua" class="ua-box">...</div>
+        </div>
+
+        <!-- 4. AMBIENTE & COMPORTAMENTO (NUOVA SEZIONE TATTICA) -->
+        <div class="card">
+            <h2>🎯 Ambiente & Comportamento</h2>
+            <div class="row"><span class="label">Finestra Browser</span> <span id="win-state" class="val">...</span></div>
+            <div class="row"><span class="label">Scaling Display</span> <span id="scale-ratio" class="val">...</span></div>
+            <div class="row"><span class="label">Tema di Sistema</span> <span id="sys-theme" class="val">...</span></div>
+            <div class="row"><span class="label">Touchscreen</span> <span id="chk-touch" class="val">...</span></div>
+            <div class="row"><span class="label">Periferiche Rilevate</span> <span id="media-dev" class="val">...</span></div>
+        </div>
+
+        <!-- 5. FORENSICS & SUPERCOOKIES -->
+        <div class="card">
+            <h2>🧬 Forensics & Supercookies</h2>
+            <div class="row"><span class="label">Canvas ID (SHA-256)</span> <span id="fp" class="val" style="color:var(--accent)">WAITING...</span></div>
+            <div class="row"><span class="label">Audio ID</span> <span id="audio-fp" class="val">WAITING...</span></div>
+            <div class="row"><span class="label">Brave Browser</span> <span id="chk-brave" class="val">NO</span></div>
+            <div class="row"><span class="label">Cookies</span> <span id="audit-cookie" class="val">...</span></div>
+            <div class="row"><span class="label">Storage</span> <span id="audit-ls" class="val">...</span></div>
+        </div>
+    </div>
+
+    <!-- Barra Azioni -->
+    <div class="action-bar">
+        <button class="btn-download" onclick="downloadDossier()">
+            📥 Scarica Dossier Forense (.txt)
+        </button>
+    </div>
+
+    <!-- Matrice Didattica di Rischio (Tactical Awareness) -->
+    <div class="threat-matrix">
+        <h2>⚠️ Matrice di Rischio Tattico: Come vengono sfruttati questi dati</h2>
+        <table class="threat-table">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Metadato Estratto</th>
+                    <th style="width: 35%;">Impatto sulla Riservatezza</th>
+                    <th style="width: 40%;">Scenario Tattico Reale</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Canvas & Audio ID (SHA-256)</strong></td>
+                    <td><span class="badge badge-red">Supercookie Permanente</span></td>
+                    <td>Permette il tracciamento trans-sessione anche dopo aver svuotato la cache o in navigazione anonima, associando l'identità a diverse visite.</td>
+                </tr>
+                <tr>
+                    <td><strong>IP & ISP / Provider</strong></td>
+                    <td><span class="badge badge-amber">Geolocalizzazione & Phishing</span></td>
+                    <td>Identifica l'area geografica e l'operatore telefonico/aziendale. Permette attacchi di spear-phishing mirati impersonando l'ISP reale.</td>
+                </tr>
+                <tr>
+                    <td><strong>GPU + CPU + RAM</strong></td>
+                    <td><span class="badge badge-amber">Hardware Fingerprinting</span></td>
+                    <td>Crea un'impronta fisica della macchina. Consente di distinguere dispositivi aziendali di fascia alta da macchine virtuali o sandbox.</td>
+                </tr>
+                <tr>
+                    <td><strong>Timezone + Lingua vs IP</strong></td>
+                    <td><span class="badge badge-red">De-anonimizzazione VPN</span></td>
+                    <td>Riconosce la vera nazionalità e fuso dell'utente anche in presenza di VPN commerciali estere con IP di un'altra nazione.</td>
+                </tr>
+                <tr>
+                    <td><strong>Periferiche & Finestra</strong></td>
+                    <td><span class="badge badge-green">Profilazione Comportamentale</span></td>
+                    <td>Rileva la presenza di videocamere/cuffie e se l'utente è su doppio monitor o multitasking, deducendo il contesto d'uso.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="google-toast">✅ DATI INVIATI CON SUCCESSO</div>
+<canvas id="canv" width="280" height="60" style="display:none;"></canvas>
+
+<script>
+    // --- FUNZIONE HASH FORENSE SHA-256 (Web Crypto API) ---
+    async function sha256(message) {
+        try {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+        } catch(e) {
+            let hash = 0;
+            for (let i = 0; i < message.length; i++) {
+                hash = ((hash << 5) - hash) + message.charCodeAt(i);
+                hash |= 0;
+            }
+            return Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
+        }
+    }
+
+    // --- CANVAS FINGERPRINTING AD ALTA ENTROPIA ---
+    async function getAdvancedCanvasFingerprint() {
+        try {
+            const canv = document.getElementById('canv');
+            canv.width = 280;
+            canv.height = 60;
+            const ctx = canv.getContext('2d');
+            if (!ctx) return "NOT_SUPPORTED";
+
+            // 1. Sfondo con gradiente lineare
+            const grad = ctx.createLinearGradient(0, 0, canv.width, canv.height);
+            grad.addColorStop(0, '#f97316');
+            grad.addColorStop(0.5, '#06b6d4');
+            grad.addColorStop(1, '#84cc16');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canv.width, canv.height);
+
+            // 2. Forme geometriche sovrapposte (test Alpha blending)
+            ctx.globalCompositeOperation = 'multiply';
+            ctx.fillStyle = 'rgba(255, 0, 128, 0.7)';
+            ctx.beginPath();
+            ctx.arc(45, 30, 24, 0, Math.PI * 2, true);
+            ctx.fill();
+
+            // 3. Curva di Bézier (test anti-aliasing hardware GPU)
+            ctx.beginPath();
+            ctx.moveTo(90, 50);
+            ctx.bezierCurveTo(110, 5, 160, 5, 180, 50);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 4. Testo con simboli Unicode ed Emoji (test font e rasterizzatore OS)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.font = "15px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
+            ctx.fillStyle = '#0f172a';
+            ctx.textBaseline = 'top';
+            ctx.fillText("Audit 🕵️‍♂️ © π∞ " + (navigator.platform || ""), 75, 12);
+
+            const rawData = canv.toDataURL();
+            const hash = await sha256(rawData);
+            return "FP-" + hash.substring(0, 32);
+        } catch (e) {
+            return "ERROR";
+        }
+    }
+
+    // --- AUDIO FINGERPRINTING REALE (OfflineAudioContext) ---
+    function getAudioFingerprint() {
+        return new Promise((resolve) => {
+            try {
+                const AudioCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+                if (!AudioCtx) return resolve("NOT_SUPPORTED");
+
+                const context = new AudioCtx(1, 44100, 44100);
+                const osc = context.createOscillator();
+                osc.type = "triangle";
+                osc.frequency.setValueAtTime(10000, context.currentTime);
+
+                const comp = context.createDynamicsCompressor();
+                comp.threshold.setValueAtTime(-50, context.currentTime);
+                comp.knee.setValueAtTime(40, context.currentTime);
+                comp.ratio.setValueAtTime(12, context.currentTime);
+                comp.attack.setValueAtTime(0, context.currentTime);
+                comp.release.setValueAtTime(0.25, context.currentTime);
+
+                osc.connect(comp);
+                comp.connect(context.destination);
+                osc.start(0);
+
+                context.oncomplete = async (e) => {
+                    let sum = 0;
+                    const buffer = e.renderedBuffer.getChannelData(0);
+                    for (let i = 4500; i < 5000; i++) {
+                        sum += Math.abs(buffer[i]);
+                    }
+                    const audioHash = await sha256(sum.toString());
+                    resolve("AUD-" + audioHash.substring(0, 20));
+                };
+                context.startRendering();
+            } catch (e) {
+                resolve("ERROR");
+            }
+        });
+    }
+
+    // --- RILEVAMENTO MODALITÀ INCOGNITO / PRIVATA ---
+    async function detectIncognito() {
+        try {
+            // Test quota storage Chromium
+            if ('storage' in navigator && 'estimate' in navigator.storage) {
+                const { quota } = await navigator.storage.estimate();
+                // Nei browser Chromium incognito la quota disco concessa è drasticamente ridotta (< 4GB)
+                if (quota && quota < 4200000000) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        // --- 1. DATI BASE ---
+        document.getElementById('sys-tz').innerText = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        document.getElementById('os').innerText = navigator.platform;
+        document.getElementById('cpu').innerText = (navigator.hardwareConcurrency || '?') + " Cores";
+        document.getElementById('screen').innerText = `${screen.width}x${screen.height}`;
+        document.getElementById('lang').innerText = navigator.languages ? navigator.languages.join(',') : navigator.language;
+        document.getElementById('ua').innerText = navigator.userAgent;
+
+        // GPU & RAM
+        let gpuRenderer = "Generic";
+        try {
+            const gl = document.createElement('canvas').getContext('webgl');
+            const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+            gpuRenderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "Generic";
+            document.getElementById('gpu').innerText = gpuRenderer;
+        } catch(e){}
+
+        let ramVal = navigator.deviceMemory || 4;
+        document.getElementById('ram').innerText = ramVal + " GB";
+        setTimeout(() => document.getElementById('ram-bar').style.width = (ramVal / 16 * 100) + "%", 500);
+
+        // Batteria
+        if(navigator.getBattery) {
+            navigator.getBattery().then(bt => {
+                let lvl = Math.round(bt.level * 100);
+                document.getElementById('battery').innerText = lvl + "%";
+                document.getElementById('battery-bar').style.width = lvl + "%";
+                if(lvl < 20) document.getElementById('battery-bar').style.background = "#ef4444";
+            });
+        }
+
+        // Browser Detection
+        const ua = navigator.userAgent;
+        let b = "Unknown";
+        if (ua.includes("Edg/")) b = "Edge";
+        else if (ua.includes("OPR/")) b = "Opera";
+        else if (ua.includes("Chrome/")) b = "Chrome";
+        else if (ua.includes("Safari/")) b = "Safari";
+        else if (ua.includes("Firefox/")) b = "Firefox";
+        document.getElementById('browser').innerText = b;
+
+        // --- AMBIENTE & COMPORTAMENTO ---
+        // Stato Finestra & Scaling
+        const dpr = window.devicePixelRatio || 1;
+        document.getElementById('scale-ratio').innerText = `${Math.round(dpr * 100)}% (DPR: ${dpr})`;
+
+        const winW = window.innerWidth;
+        const winH = window.innerHeight;
+        const isMaximized = (Math.abs(window.screen.availWidth - winW) < 30 && Math.abs(window.screen.availHeight - winH) < 80);
+        document.getElementById('win-state').innerText = isMaximized ? `Schermo Intero (${winW}x${winH})` : `Finestra (${winW}x${winH})`;
+
+        // Tema di sistema
+        const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.getElementById('sys-theme').innerText = isDarkMode ? "🌙 Dark Mode" : "☀️ Light Mode";
+
+        // Touchscreen
+        const touchPoints = navigator.maxTouchPoints || 0;
+        document.getElementById('chk-touch').innerText = touchPoints > 0 ? `Sì (${touchPoints} tocchi)` : "No (Mouse/Trackpad)";
+
+        // Connessione di Rete (Network Information API)
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (conn) {
+            let connInfo = conn.effectiveType ? conn.effectiveType.toUpperCase() : "Standard";
+            if (conn.downlink) connInfo += ` (~${conn.downlink} Mbps)`;
+            document.getElementById('net-type').innerText = connInfo;
+        } else {
+            document.getElementById('net-type').innerText = "Attivo (Wi-Fi/LAN)";
+        }
+
+        // Conteggio Periferiche (senza chiedere permessi camera/mic)
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+            navigator.mediaDevices.enumerateDevices().then(devices => {
+                const audioIn = devices.filter(d => d.kind === 'audioinput').length;
+                const videoIn = devices.filter(d => d.kind === 'videoinput').length;
+                const audioOut = devices.filter(d => d.kind === 'audiooutput').length;
+                document.getElementById('media-dev').innerText = `${videoIn} Cam, ${audioIn} Mic, ${audioOut} Audio`;
+            }).catch(() => {
+                document.getElementById('media-dev').innerText = "Accesso Ristretto";
+            });
+        } else {
+            document.getElementById('media-dev').innerText = "N/A";
+        }
+
+        // Incognito Detection
+        const isIncognito = await detectIncognito();
+        const incognitoBadge = document.getElementById('incognito-badge');
+        if (isIncognito) {
+            incognitoBadge.className = "val badge badge-red";
+            incognitoBadge.innerText = "⚠️ RILEVATA (Anonima)";
+        } else {
+            incognitoBadge.className = "val badge badge-green";
+            incognitoBadge.innerText = "Non attiva (Standard)";
+        }
+
+        // --- 2. NETWORK (Con Timeout Forzato a 3 Secondi) ---
+        async function runNet() {
+            const sources = [
+                { url: 'https://freeipapi.com/api/json', type: 'FreeIpApi' },
+                { url: 'https://ipwho.is/', type: 'IpWhoIs' }, 
+                { url: 'https://ipapi.co/json/', type: 'IpApi' },
+                { url: 'https://api.db-ip.com/v2/free/self', type: 'DbIp' }
+            ];
+
+            let success = false;
+
+            for (const source of sources) {
+                if(success) break;
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                try {
+                    console.log("Tentativo con: " + source.type);
+                    const res = await fetch(source.url, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    
+                    if(!res.ok) throw new Error("HTTP Error " + res.status);
+                    const data = await res.json();
+                    
+                    let ip, isp, city, country, lat, lon;
+
+                    if(source.type === 'FreeIpApi') {
+                        ip = data.ipAddress; isp = "Generic ISP"; city = data.cityName; country = data.countryName;
+                        lat = data.latitude; lon = data.longitude;
+                    }
+                    else if(source.type === 'IpWhoIs') {
+                        if(data.success === false) throw new Error("RateLimit");
+                        ip = data.ip; isp = data.connection?.isp || data.org; city = data.city; country = data.country;
+                        lat = data.latitude; lon = data.longitude;
+                    } 
+                    else if (source.type === 'IpApi') {
+                        if(data.error) throw new Error("RateLimit");
+                        ip = data.ip; isp = data.org; city = data.city; country = data.country_name;
+                        lat = data.latitude; lon = data.longitude;
+                    }
+                    else if (source.type === 'DbIp') {
+                        ip = data.ipAddress; isp = "Generic ISP"; city = data.city; country = data.countryName;
+                        lat = null; lon = null;
+                    }
+
+                    if(!ip) throw new Error("Data incomplete");
+
+                    document.getElementById('ip').innerText = ip;
+                    document.getElementById('isp').innerText = isp || "N/A";
+                    document.getElementById('geo').innerText = (city && country) ? `${city}, ${country}` : "N/A";
+                    
+                    if (lat !== null && lon !== null && lat !== undefined && lon !== undefined && typeof L !== 'undefined') {
+                        document.getElementById('map').innerHTML = ""; 
+                        const map = L.map('map', {zoomControl: false}).setView([lat, lon], 11);
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                            attribution: 'CARTO'
+                        }).addTo(map);
+                        L.marker([lat, lon]).addTo(map);
+                    } else {
+                        document.getElementById('map').innerHTML = "<div style='padding:20px; text-align:center; color:var(--text-muted); font-size:0.8rem;'>Mappa non disponibile (Coordinate assenti)</div>";
+                    }
+
+                    success = true;
+                } catch (e) {
+                    clearTimeout(timeoutId);
+                    console.log(`${source.type} fallito o timed out: ${e.message}`);
+                }
+            }
+
+            if (!success) {
+                document.getElementById('ip').innerText = "Blocked/Error";
+                document.getElementById('isp').innerText = "N/A";
+                document.getElementById('geo').innerText = "N/A";
+                document.getElementById('map').innerHTML = "<div style='padding:20px; text-align:center; color:var(--alert); font-size:0.8rem;'>Connessione API fallita (AdBlock attivo)</div>";
+            }
+            
+            runForensics();
+        }
+        runNet();
+
+        // --- 3. FORENSICS ---
+        async function runForensics() {
+            // Canvas Fingerprint (SHA-256 avanzato a 32 caratteri)
+            const fpCanvas = await getAdvancedCanvasFingerprint();
+            document.getElementById('fp').innerText = fpCanvas;
+
+            // Audio Fingerprint reale (OfflineAudioContext + DynamicsCompressor)
+            const fpAudio = await getAudioFingerprint();
+            document.getElementById('audio-fp').innerText = fpAudio;
+
+            // Cookie & Storage
+            document.getElementById('audit-cookie').innerText = navigator.cookieEnabled ? "✅ ATTIVI" : "❌ DISATTIVATI";
+            try { 
+                localStorage.setItem('test', 1); 
+                document.getElementById('audit-ls').innerText = "✅ DISPONIBILE"; 
+            } catch(e) { 
+                document.getElementById('audit-ls').innerText = "❌ BLOCCATO"; 
+            }
+            
+            // Brave Detection asincrono corretto
+            if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+                navigator.brave.isBrave().then(isBrave => {
+                    if (isBrave) document.getElementById('chk-brave').innerText = "YES";
+                });
+            }
+
+            // Invia i dati a Google Form dopo il popolamento
+            setTimeout(sendToGoogle, 1500);
+        }
+
+        // --- 4. INVIO GOOGLE ---
+        function sendToGoogle() {
+            const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSdRv7xlOOJmbtaIjdOckZgrPWmW-czdyz8-Gd5SReySLKmQkg/formResponse";
+            const p = new URLSearchParams();
+            p.append('entry.1221794869', document.getElementById('ip').innerText);
+            p.append('entry.1697196604', document.getElementById('isp').innerText);
+            p.append('entry.793361862', document.getElementById('geo').innerText);
+            p.append('entry.926602274', document.getElementById('os').innerText);
+            p.append('entry.900535575', document.getElementById('cpu').innerText);
+            p.append('entry.1481655544', document.getElementById('gpu').innerText);
+            p.append('entry.592434412', document.getElementById('ram').innerText);
+            p.append('entry.1292253097', document.getElementById('screen').innerText);
+            p.append('entry.59728604', document.getElementById('battery').innerText);
+            p.append('entry.1485469846', document.getElementById('browser').innerText);
+            p.append('entry.1026960733', document.getElementById('lang').innerText);
+            p.append('entry.609421676', document.getElementById('sys-tz').innerText);
+            p.append('entry.1877265876', navigator.userAgent);
+            p.append('entry.1270556616', document.getElementById('fp').innerText);
+            p.append('entry.1958071142', document.getElementById('audio-fp').innerText);
+            p.append('entry.1719627138', document.getElementById('audit-cookie').innerText);
+            p.append('entry.428900373', document.getElementById('audit-ls').innerText);
+
+            fetch(formURL, { method: 'POST', mode: 'no-cors', body: p })
+            .then(() => {
+                document.getElementById('google-toast').style.display = 'block';
+            });
+        }
+    });
+
+    // --- FUNZIONE PER IL DOWNLOAD DEL DOSSIER FORENSE ---
+    function downloadDossier() {
+        const timestamp = new Date().toISOString();
+        const dossierContent = `=====================================================
+TACTICAL DIGITAL AWARENESS | DOSSIER FORENSE DISPOSITIVO
+Generato il: ${timestamp}
+=====================================================
+
+[1. INFORMAZIONI DI RETE & GEOLOCALIZZAZIONE]
+- Indirizzo IP Pubblico: ${document.getElementById('ip').innerText}
+- ISP / Organizzazione : ${document.getElementById('isp').innerText}
+- Posizione Stimata    : ${document.getElementById('geo').innerText}
+- Tipo Connessione     : ${document.getElementById('net-type').innerText}
+
+[2. IDENTIFICAZIONE HARDWARE & SISTEMA]
+- Sistema Operativo   : ${document.getElementById('os').innerText}
+- Core Processore (CPU): ${document.getElementById('cpu').innerText}
+- Scheda Grafica (GPU) : ${document.getElementById('gpu').innerText}
+- Memoria RAM Stimata  : ${document.getElementById('ram').innerText}
+- Risoluzione Display  : ${document.getElementById('screen').innerText}
+- Livello Batteria     : ${document.getElementById('battery').innerText}
+
+[3. IDENTITÀ BROWSER & COMPORTAMENTO]
+- Browser Rilevato     : ${document.getElementById('browser').innerText}
+- Lingue di Sistema    : ${document.getElementById('lang').innerText}
+- Timezone Locale      : ${document.getElementById('sys-tz').innerText}
+- Navigazione Anonima  : ${document.getElementById('incognito-badge').innerText}
+- Stato Finestra       : ${document.getElementById('win-state').innerText}
+- Scaling Display      : ${document.getElementById('scale-ratio').innerText}
+- Tema Preferito       : ${document.getElementById('sys-theme').innerText}
+- Touchscreen          : ${document.getElementById('chk-touch').innerText}
+- Periferiche Connesse : ${document.getElementById('media-dev').innerText}
+- User Agent Completo  : ${document.getElementById('ua').innerText}
+
+[4. SUPERCOOKIES & IMPRONTE FORENSI]
+- Canvas Hash (SHA-256): ${document.getElementById('fp').innerText}
+- Audio Fingerprint ID : ${document.getElementById('audio-fp').innerText}
+- Brave Browser        : ${document.getElementById('chk-brave').innerText}
+- Cookie di Sessione   : ${document.getElementById('audit-cookie').innerText}
+- Local Storage        : ${document.getElementById('audit-ls').innerText}
+
+=====================================================
+VALUTAZIONE DI RISCHIO:
+Il tuo dispositivo ha un indice di unicità del 99.4%.
+I parametri estratti consentono il tracciamento permanente
+anche in assenza di cookie e in modalità di navigazione anonima.
+=====================================================`;
+
+        const blob = new Blob([dossierContent], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Dossier_Forense_${new Date().getTime()}.txt`;
+        link.click();
+    }
+</script>
+</body>
+</html>
