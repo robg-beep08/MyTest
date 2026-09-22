@@ -124,16 +124,111 @@
 </div>
 
 <div id="google-toast">✅ DATI INVIATI CON SUCCESSO</div>
-<canvas id="canv" width="200" height="50" style="display:none;"></canvas>
+<canvas id="canv" width="280" height="60" style="display:none;"></canvas>
 
 <script>
-    function generateHash(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) - hash) + str.charCodeAt(i);
-            hash |= 0;
+    // --- FUNZIONE HASH FORENSE SHA-256 (Web Crypto API) ---
+    async function sha256(message) {
+        try {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+        } catch(e) {
+            // Fallback per ambienti locali o non sicuri
+            let hash = 0;
+            for (let i = 0; i < message.length; i++) {
+                hash = ((hash << 5) - hash) + message.charCodeAt(i);
+                hash |= 0;
+            }
+            return Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
         }
-        return Math.abs(hash).toString(16).toUpperCase();
+    }
+
+    // --- CANVAS FINGERPRINTING AD ALTA ENTROPIA ---
+    async function getAdvancedCanvasFingerprint() {
+        try {
+            const canv = document.getElementById('canv');
+            canv.width = 280;
+            canv.height = 60;
+            const ctx = canv.getContext('2d');
+            if (!ctx) return "NOT_SUPPORTED";
+
+            // 1. Sfondo con gradiente lineare
+            const grad = ctx.createLinearGradient(0, 0, canv.width, canv.height);
+            grad.addColorStop(0, '#f97316');
+            grad.addColorStop(0.5, '#06b6d4');
+            grad.addColorStop(1, '#84cc16');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canv.width, canv.height);
+
+            // 2. Forme geometriche sovrapposte (test Alpha blending)
+            ctx.globalCompositeOperation = 'multiply';
+            ctx.fillStyle = 'rgba(255, 0, 128, 0.7)';
+            ctx.beginPath();
+            ctx.arc(45, 30, 24, 0, Math.PI * 2, true);
+            ctx.fill();
+
+            // 3. Curva di Bézier (test anti-aliasing hardware GPU)
+            ctx.beginPath();
+            ctx.moveTo(90, 50);
+            ctx.bezierCurveTo(110, 5, 160, 5, 180, 50);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 4. Testo con simboli Unicode ed Emoji (test font e rasterizzatore OS)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.font = "15px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
+            ctx.fillStyle = '#0f172a';
+            ctx.textBaseline = 'top';
+            ctx.fillText("Audit 🕵️‍♂️ © π∞ " + (navigator.platform || ""), 75, 12);
+
+            const rawData = canv.toDataURL();
+            const hash = await sha256(rawData);
+            return "FP-" + hash.substring(0, 32);
+        } catch (e) {
+            return "ERROR";
+        }
+    }
+
+    // --- AUDIO FINGERPRINTING REALE (OfflineAudioContext) ---
+    function getAudioFingerprint() {
+        return new Promise((resolve) => {
+            try {
+                const AudioCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+                if (!AudioCtx) return resolve("NOT_SUPPORTED");
+
+                const context = new AudioCtx(1, 44100, 44100);
+                const osc = context.createOscillator();
+                osc.type = "triangle";
+                osc.frequency.setValueAtTime(10000, context.currentTime);
+
+                const comp = context.createDynamicsCompressor();
+                comp.threshold.setValueAtTime(-50, context.currentTime);
+                comp.knee.setValueAtTime(40, context.currentTime);
+                comp.ratio.setValueAtTime(12, context.currentTime);
+                comp.attack.setValueAtTime(0, context.currentTime);
+                comp.release.setValueAtTime(0.25, context.currentTime);
+
+                osc.connect(comp);
+                comp.connect(context.destination);
+                osc.start(0);
+
+                context.oncomplete = async (e) => {
+                    let sum = 0;
+                    const buffer = e.renderedBuffer.getChannelData(0);
+                    for (let i = 4500; i < 5000; i++) {
+                        sum += Math.abs(buffer[i]);
+                    }
+                    const audioHash = await sha256(sum.toString());
+                    resolve("AUD-" + audioHash.substring(0, 20));
+                };
+                context.startRendering();
+            } catch (e) {
+                resolve("ERROR");
+            }
+        });
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -192,16 +287,13 @@
             for (const source of sources) {
                 if(success) break;
 
-                // Creiamo un meccanismo di ABORT per forzare il timeout
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000); // 3000ms = 3 secondi max
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
 
                 try {
                     console.log("Tentativo con: " + source.type);
-                    
-                    // Passiamo il segnale di abort al fetch
                     const res = await fetch(source.url, { signal: controller.signal });
-                    clearTimeout(timeoutId); // Se risponde in tempo, cancelliamo il timer di emergenza
+                    clearTimeout(timeoutId);
                     
                     if(!res.ok) throw new Error("HTTP Error " + res.status);
                     const data = await res.json();
@@ -229,12 +321,10 @@
 
                     if(!ip) throw new Error("Data incomplete");
 
-                    // Scrittura immediata sul DOM locale
                     document.getElementById('ip').innerText = ip;
                     document.getElementById('isp').innerText = isp || "N/A";
                     document.getElementById('geo').innerText = (city && country) ? `${city}, ${country}` : "N/A";
                     
-                    // Renderizzazione Mappa
                     if (lat !== null && lon !== null && lat !== undefined && lon !== undefined && typeof L !== 'undefined') {
                         document.getElementById('map').innerHTML = ""; 
                         const map = L.map('map', {zoomControl: false}).setView([lat, lon], 11);
@@ -246,15 +336,13 @@
                         document.getElementById('map').innerHTML = "<div style='padding:20px; text-align:center; color:var(--text-muted); font-size:0.8rem;'>Mappa non disponibile (Coordinate assenti)</div>";
                     }
 
-                    success = true; // Abbassiamo la flag di successo per interrompere il ciclo
+                    success = true;
                 } catch (e) {
-                    clearTimeout(timeoutId); // Prevenzione memory leak se fallisce per altri motivi
+                    clearTimeout(timeoutId);
                     console.log(`${source.type} fallito o timed out: ${e.message}`);
-                    // Se l'errore è causato dall'abort, e.name sarà "AbortError"
                 }
             }
 
-            // Se TUTTI i tentativi falliscono (o vanno in timeout) entro i 12 secondi totali (3s x 4)
             if (!success) {
                 document.getElementById('ip').innerText = "Blocked/Error";
                 document.getElementById('isp').innerText = "N/A";
@@ -262,27 +350,37 @@
                 document.getElementById('map').innerHTML = "<div style='padding:20px; text-align:center; color:var(--alert); font-size:0.8rem;'>Connessione API fallita (AdBlock attivo)</div>";
             }
             
-            // Ora l'analisi forense e l'invio partiranno SEMPRE e in tempi brevi
             runForensics();
         }
         runNet();
 
         // --- 3. FORENSICS ---
-        function runForensics() {
-            const canv = document.getElementById('canv');
-            const ctx = canv.getContext('2d');
-            ctx.textBaseline = "top"; ctx.font = "14px 'Arial'"; ctx.fillText("X-RAY " + navigator.platform, 2, 15);
-            document.getElementById('fp').innerText = "FP-" + generateHash(canv.toDataURL());
+        async function runForensics() {
+            // Canvas Fingerprint (SHA-256 avanzato a 32 caratteri)
+            const fpCanvas = await getAdvancedCanvasFingerprint();
+            document.getElementById('fp').innerText = fpCanvas;
 
-            const audioFeatures = (window.OfflineAudioContext || window.webkitOfflineAudioContext).name + screen.colorDepth;
-            document.getElementById('audio-fp').innerText = "AUD-" + generateHash(audioFeatures);
+            // Audio Fingerprint reale (OfflineAudioContext + DynamicsCompressor)
+            const fpAudio = await getAudioFingerprint();
+            document.getElementById('audio-fp').innerText = fpAudio;
 
+            // Cookie & Storage
             document.getElementById('audit-cookie').innerText = navigator.cookieEnabled ? "✅ ATTIVI" : "❌ DISATTIVATI";
-            try { localStorage.setItem('test',1); document.getElementById('audit-ls').innerText = "✅ DISPONIBILE"; } catch(e){ document.getElementById('audit-ls').innerText = "❌ BLOCCATO"; }
+            try { 
+                localStorage.setItem('test', 1); 
+                document.getElementById('audit-ls').innerText = "✅ DISPONIBILE"; 
+            } catch(e) { 
+                document.getElementById('audit-ls').innerText = "❌ BLOCCATO"; 
+            }
             
-            if(navigator.brave) document.getElementById('chk-brave').innerText = "YES";
+            // Brave Detection asincrono corretto
+            if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+                navigator.brave.isBrave().then(isBrave => {
+                    if (isBrave) document.getElementById('chk-brave').innerText = "YES";
+                });
+            }
 
-            // Invia i dati strutturati a Google Form solo DOPO che i campi sono stati popolati
+            // Invia i dati a Google Form dopo il popolamento
             setTimeout(sendToGoogle, 1500);
         }
 
