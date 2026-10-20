@@ -1,3 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tactical Radar Command Center | Multi-Target PDR</title>
+    
+    <!-- Leaflet & OpenStreetMap (Free, No API Key Required) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    
+    <!-- PeerJS for Real-Time Peer-to-Peer Multi-Device Tracking -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    
+    <!-- QRCode Generator for Instant Mobile Infiltration -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root { 
+            --bg: #030712;
+            --surface: #0b1329;
+            --surface-card: #111e38;
+            --border: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --radar-green: #22c55e;
+            --radar-glow: rgba(34, 197, 94, 0.15);
+        }
+
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; }
+        .wrapper { max-width: 1560px; margin: auto; }
+
+        /* Top Command Header */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--surface); border: 1px solid var(--border);
+            padding: 18px 24px; border-radius: 12px; margin-bottom: 20px;
+            flex-wrap: wrap; gap: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .header-title h1 { font-size: 1.4rem; margin: 0; color: #38bdf8; font-family: 'JetBrains Mono', monospace; letter-spacing: 1.5px; font-weight: 700; }
+        .header-title .subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+        .session-badge {
+            background: #022c22; color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4);
+            padding: 6px 14px; border-radius: 8px; font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* Control & Range Toolbar */
+        .toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--surface); border: 1px solid var(--border);
+            padding: 12px 20px; border-radius: 10px; margin-bottom: 20px;
+            flex-wrap: wrap; gap: 10px;
+        }
+        .btn-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .btn-cmd {
+            background: #1e293b; color: #f8fafc; border: 1px solid #334155;
+            padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;
+            cursor: pointer; transition: all 0.2s; font-weight: 600;
+        }
+        .btn-cmd:hover { background: #334155; border-color: #475569; }
+        .btn-cmd.active { background: #2563eb; border-color: #38bdf8; color: white; }
+        .btn-reset { background: #7f1d1d; border-color: #991b1b; color: #fca5a5; }
+        .btn-reset:hover { background: #991b1b; }
+
+        /* Main Split Grid (Radar on Left, QR & Live Feeds on Right) */
+        .main-grid {
+            display: grid; grid-template-columns: 1fr 400px; gap: 20px; margin-bottom: 25px;
+        }
+        @media (max-width: 1100px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Radar Box */
+        .radar-box {
+            background: var(--surface); border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 12px; padding: 20px; position: relative;
+            box-shadow: 0 0 30px var(--radar-glow); display: flex; flex-direction: column;
+        }
+        .radar-canvas-wrap {
+            position: relative; width: 100%; aspect-ratio: 16/10; min-height: 480px;
+            background: radial-gradient(circle at center, #022c22 0%, #030712 80%);
+            border-radius: 10px; overflow: hidden; border: 1px solid rgba(34, 197, 94, 0.25);
+        }
+        #radarCanvas { width: 100%; height: 100%; display: block; }
+
+        /* Side Command Panel */
+        .side-panel {
+            display: flex; flex-direction: column; gap: 20px;
+        }
+        .qr-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; display: flex; flex-direction: column;
+            align-items: center; text-align: center;
+        }
+        .qr-card h3 { margin: 0 0 6px 0; font-size: 0.95rem; color: #38bdf8; font-family: 'JetBrains Mono', monospace; }
+        .qr-card p { font-size: 0.75rem; color: var(--text-muted); margin: 0 0 14px 0; }
+        #qr-container { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        
+        .url-box-container {
+            width: 100%; margin-top: 14px;
+        }
+        .url-input {
+            width: 95%; background: #030712; color: #38bdf8; border: 1px solid #1e293b;
+            padding: 8px 10px; border-radius: 6px; font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem; box-sizing: border-box; text-align: center;
+        }
+        .url-notice {
+            margin-top: 8px; font-size: 0.7rem; color: #f59e0b; line-height: 1.3;
+            background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 8px 10px; border-radius: 6px; text-align: left;
+        }
+
+        /* Target Table */
+        .table-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; margin-bottom: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4); overflow-x: auto;
+        }
+        .table-card h2 {
+            margin: 0 0 15px 0; font-size: 1.1rem; color: #f8fafc; font-family: 'JetBrains Mono', monospace;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .fleet-count { font-size: 0.8rem; color: #38bdf8; font-weight: normal; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-family: 'JetBrains Mono', monospace; }
+        th { text-align: left; padding: 12px 10px; background: #030712; color: #94a3b8; border-bottom: 1px solid var(--border); }
+        td { padding: 12px 10px; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+        tr:hover { background: #111e38; }
+
+        .target-tag {
+            display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px;
+            border-radius: 6px; font-weight: 700; font-size: 0.75rem; white-space: nowrap;
+        }
+        .pulse-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
+
+        /* Simulated Real GPS Map */
+        .map-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; margin-bottom: 25px;
+        }
+        .map-card h2 { margin: 0 0 12px 0; font-size: 1.1rem; color: #f8fafc; font-family: 'JetBrains Mono', monospace; }
+        #gpsMap { height: 380px; width: 100%; border-radius: 8px; border: 1px solid var(--border); }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <!-- Top Header -->
+    <header>
+        <div class="header-title">
+            <h1>🛰️ Tactical Radar Command Center</h1>
+            <div class="subtitle">Multi-Target Kinetic Infiltration & Pedestrian Dead Reckoning (PDR)</div>
+        </div>
+        <div class="session-badge" id="session-display">
+            <span class="pulse-dot" style="background:#4ade80;"></span>
+            <span id="session-id-text">INITIALIZING SESSION...</span>
+        </div>
+    </header>
+
+    <!-- Range & Zoom Toolbar -->
+    <div class="toolbar">
+        <div class="btn-group">
+            <span style="font-size: 0.8rem; color:#94a3b8; font-family:'JetBrains Mono',monospace; margin-right:6px;">RADAR RANGE:</span>
+            <button class="btn-cmd active" id="btn-auto" onclick="setRadarRange('auto')">AUTO-FIT</button>
+            <button class="btn-cmd" id="btn-25" onclick="setRadarRange(25)">25 METERS</button>
+            <button class="btn-cmd" id="btn-50" onclick="setRadarRange(50)">50 METERS</button>
+            <button class="btn-cmd" id="btn-100" onclick="setRadarRange(100)">100 METERS</button>
+            <button class="btn-cmd" id="btn-250" onclick="setRadarRange(250)">250 METERS</button>
+        </div>
+        <div class="btn-group">
+            <button class="btn-cmd btn-reset" onclick="resetAllTrails()">🔄 RESET ALL TRAILS</button>
+        </div>
+    </div>
+
+    <!-- Main Grid: Radar Screen + QR Infiltration Panel -->
+    <div class="main-grid">
+        <!-- Live Tactical Radar Screen -->
+        <div class="radar-box">
+            <div class="radar-canvas-wrap">
+                <canvas id="radarCanvas" width="900" height="560"></canvas>
+            </div>
+        </div>
+
+        <!-- QR Code & Infiltration Instructions -->
+        <div class="side-panel">
+            <div class="qr-card">
+                <h3>📲 Infiltrate Target Device</h3>
+                <p>Scan with any smartphone camera to link device live to this Radar Command Center.</p>
+                <div id="qr-container"></div>
+
+                <div class="url-box-container">
+                    <input type="text" id="target-url-input" class="url-input" readonly />
+                    <div id="localhost-notice" class="url-notice" style="display:none;">
+                        ⚡ <strong>Localhost Detected:</strong> Smartphones cannot scan "localhost". The QR code automatically targets your live GitHub Pages site so any phone can connect instantly.
+                    </div>
+                </div>
+            </div>
+
+            <div class="qr-card" style="text-align: left; align-items: flex-start;">
+                <h3 style="color:#4ade80;">💡 Live Instructor Guide</h3>
+                <p style="margin-bottom:8px; line-height: 1.4;">
+                    1. Project this page on the classroom screen.<br>
+                    2. Invite students to scan the QR code with their smartphones.<br>
+                    3. Each phone connects instantly without installing any app.<br>
+                    4. When students rotate their phone, their directional compass arrow spins on the radar in real time.<br>
+                    5. As they walk, distinct colored footstep trails appear on the radar and street map below.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Multi-Target Fleet Telemetry Table -->
+    <div class="table-card">
+        <h2>
+            <span>🎯 Active Infiltrated Targets</span>
+            <span class="fleet-count" id="active-target-count">0 DEVICES TRACKED</span>
+        </h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 10%;">Target ID</th>
+                    <th style="width: 18%;">Device & Platform</th>
+                    <th style="width: 18%;">Public IP & Location</th>
+                    <th style="width: 10%;">Footsteps</th>
+                    <th style="width: 10%;">Distance</th>
+                    <th style="width: 10%;">Compass</th>
+                    <th style="width: 12%;">Inferred Posture</th>
+                    <th style="width: 8%;">Battery</th>
+                    <th style="width: 10%;">Link Status</th>
+                </tr>
+            </thead>
+            <tbody id="target-table-body">
+                <tr>
+                    <td colspan="9" style="text-align:center; color:#64748b; padding:24px;">
+                        Awaiting targets... Scan the QR code above with a smartphone to link.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Simulated Real-World GPS Map -->
+    <div class="map-card">
+        <h2>🗺️ Simulated Street Map (Geodetic Odometry)</h2>
+        <div id="gpsMap"></div>
+    </div>
+</div>
+
+<script>
+    // =========================================================================
+    // 1. MULTI-TARGET PALETTE & DATA STRUCTURE
+    // =========================================================================
+    const TARGET_COLORS = [
+        { hex: '#ef4444', label: 'RED' },
+        { hex: '#06b6d4', label: 'CYAN' },
+        { hex: '#84cc16', label: 'LIME' },
+        { hex: '#f59e0b', label: 'AMBER' },
+        { hex: '#ec4899', label: 'PINK' },
+        { hex: '#8b5cf6', label: 'PURPLE' },
+        { hex: '#3b82f6', label: 'BLUE' },
+        { hex: '#14b8a6', label: 'TEAL' }
+    ];
+
+    const targets = {}; 
+    let targetCounter = 0;
+    let manualRange = 'auto'; // 'auto' or numeric meters
+
+    // =========================================================================
+    // 2. LEAFLET SIMULATED GPS MAP (OPENSTREETMAP)
+    // =========================================================================
+    const defaultCenter = [41.9028, 12.4964]; // Default Rome, adjusted by incoming IP
+    const map = L.map('gpsMap', { zoomControl: true }).setView(defaultCenter, 15);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    let mapCentered = false;
+
+    // =========================================================================
+    // 3. WEBRTC COMMAND CENTER HUB (PEERJS) & SMART QR LINK
+    // =========================================================================
+    const roomId = 'RADAR-' + Math.random().toString(36).substring(2, 7).toUpperCase();
+    document.getElementById('session-id-text').innerText = `SESSION: ${roomId}`;
+
+    // Smart QR target detection:
+    // If running on localhost or file://, external phones cannot reach 'localhost'.
+    // In that case, default QR points to the GitHub Pages production deployment.
+    const isLocal = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' || 
+                    window.location.protocol === 'file:';
+
+    let targetBaseUrl = window.location.href.replace('radar.html', 'index.html').split('?')[0];
+    if (isLocal) {
+        targetBaseUrl = 'https://robg-beep08.github.io/MyTest/index.html';
+        document.getElementById('localhost-notice').style.display = 'block';
+    }
+
+    const targetUrl = targetBaseUrl + '?room=' + roomId;
+    document.getElementById('target-url-input').value = targetUrl;
+
+    new QRCode(document.getElementById('qr-container'), {
+        text: targetUrl,
+        width: 160,
+        height: 160,
+        colorDark: "#030712",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+    });
+
+    const peer = new Peer(roomId);
+
+    peer.on('open', (id) => {
+        console.log("Radar Command Center active with ID:", id);
+    });
+
+    peer.on('connection', (conn) => {
+        targetCounter++;
+        const targetNum = targetCounter;
+        const colorObj = TARGET_COLORS[(targetNum - 1) % TARGET_COLORS.length];
+
+        const targetData = {
+            id: targetNum,
+            color: colorObj.hex,
+            colorName: colorObj.label,
+            device: 'Mobile Target',
+            browser: 'Browser',
+            ip: 'Detecting...',
+            geo: 'Detecting...',
+            battery: 'N/A',
+            steps: 0,
+            distance: 0.0,
+            heading: 0,
+            posture: 'CONNECTED',
+            path: [{ x: 0, y: 0 }],
+            lat: null,
+            lon: null,
+            mapPolyline: null,
+            mapMarker: null,
+            lastSeen: Date.now()
+        };
+
+        targets[conn.peer] = targetData;
+        updateTargetTable();
+
+        conn.on('data', (data) => {
+            const t = targets[conn.peer];
+            if (!t) return;
+
+            t.lastSeen = Date.now();
+
+            if (data.device) t.device = data.device;
+            if (data.browser) t.browser = data.browser;
+            if (data.ip && data.ip !== '...') t.ip = data.ip;
+            if (data.geo && data.geo !== '...') t.geo = data.geo;
+            if (data.battery && data.battery !== 'N/A') t.battery = data.battery;
+            if (data.heading !== undefined) t.heading = data.heading;
+            if (data.posture) t.posture = data.posture;
+
+            // Geolocation initialization for street map
+            if (data.lat && data.lon) {
+                if (!t.lat || !t.lon) {
+                    t.lat = data.lat;
+                    t.lon = data.lon;
+                    if (!mapCentered) {
+                        mapCentered = true;
+                        map.setView([t.lat, t.lon], 16);
+                    }
+                    initMapMarker(t);
+                }
+            }
+
+            // Step registered (either single step flag or cumulative count)
+            if (data.step) {
+                const stepCountTarget = (data.stepCount !== undefined && data.stepCount > t.steps) 
+                    ? data.stepCount 
+                    : (t.steps + 1);
+
+                const stepsToAdd = stepCountTarget - t.steps;
+                for (let i = 0; i < stepsToAdd; i++) {
+                    t.steps++;
+                    const stride = 0.72; // ~0.72m per step
+                    t.distance = parseFloat((t.steps * stride).toFixed(1));
+
+                    const rad = (t.heading || 0) * (Math.PI / 180);
+                    const lastPt = t.path[t.path.length - 1] || { x: 0, y: 0 };
+                    const nextX = lastPt.x + (stride * Math.sin(rad));
+                    const nextY = lastPt.y + (stride * Math.cos(rad));
+                    t.path.push({ x: nextX, y: nextY });
+
+                    if (t.path.length > 800) t.path.shift();
+
+                    // Advance simulated real street map
+                    updateSimulatedGpsMap(t, stride, t.heading);
+                }
+            }
+
+            updateTargetTable();
+        });
+
+        conn.on('close', () => {
+            if (targets[conn.peer]) {
+                targets[conn.peer].posture = 'DISCONNECTED';
+                updateTargetTable();
+            }
+        });
+    });
+
+    // Initialize map marker for newly linked target
+    function initMapMarker(target) {
+        if (!target.lat || !target.lon) return;
+        if (!target.mapMarker) {
+            target.mapMarker = L.circleMarker([target.lat, target.lon], {
+                radius: 7,
+                color: '#ffffff',
+                weight: 2,
+                fillColor: target.color,
+                fillOpacity: 1
+            }).addTo(map).bindPopup(`<b>Target #${target.id}</b><br>${target.device}`);
+
+            target.mapPolyline = L.polyline([[target.lat, target.lon]], {
+                color: target.color,
+                weight: 4,
+                opacity: 0.85
+            }).addTo(map);
+        }
+    }
+
+    // Advance simulated Leaflet polyline along compass heading
+    function updateSimulatedGpsMap(target, strideMeters, headingDeg) {
+        if (!target.lat || !target.lon) {
+            const center = map.getCenter();
+            target.lat = center.lat;
+            target.lon = center.lng;
+        }
+
+        initMapMarker(target);
+
+        // Geodesic Harversine step translation
+        const dLat = (strideMeters * Math.cos(headingDeg * Math.PI / 180)) / 111111;
+        const dLon = (strideMeters * Math.sin(headingDeg * Math.PI / 180)) / (111111 * Math.cos(target.lat * Math.PI / 180));
+
+        target.lat += dLat;
+        target.lon += dLon;
+
+        if (target.mapPolyline) {
+            target.mapPolyline.addLatLng([target.lat, target.lon]);
+            target.mapMarker.setLatLng([target.lat, target.lon]);
+        }
+    }
+
+    // =========================================================================
+    // 4. RADAR CANVAS AUTO-ZOOM & MULTI-TARGET KINETIC DRAWING
+    // =========================================================================
+    const radarCanvas = document.getElementById('radarCanvas');
+    const ctx = radarCanvas.getContext('2d');
+    let sweepAngle = 0;
+
+    function getDynamicMaxRange() {
+        if (typeof manualRange === 'number') return manualRange;
+
+        // Auto-Fit: Calculate max distance reached by ANY target
+        let maxRecorded = 20;
+        Object.values(targets).forEach(t => {
+            t.path.forEach(pt => {
+                const dist = Math.sqrt(pt.x * pt.x + pt.y * pt.y);
+                if (dist > maxRecorded) maxRecorded = dist;
+            });
+        });
+
+        // Add 25% safety margin and round up to nice interval (25, 50, 100, 200, 300...)
+        const required = maxRecorded * 1.25;
+        if (required <= 25) return 25;
+        if (required <= 50) return 50;
+        if (required <= 100) return 100;
+        if (required <= 200) return 200;
+        return Math.ceil(required / 100) * 100;
+    }
+
+    function drawRadar() {
+        const w = radarCanvas.width;
+        const h = radarCanvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+        const maxRadius = Math.min(cx, cy) - 30;
+
+        const maxMeters = getDynamicMaxRange();
+        const scalePixelsPerMeter = maxRadius / maxMeters;
+
+        // Background
+        ctx.fillStyle = '#030712';
+        ctx.fillRect(0, 0, w, h);
+
+        // Concentric Distance Rings
+        const ringSteps = 4;
+        for (let i = 1; i <= ringSteps; i++) {
+            const rRatio = i / ringSteps;
+            const r = maxRadius * rRatio;
+            const distLabel = Math.round(maxMeters * rRatio) + "m";
+
+            ctx.strokeStyle = 'rgba(34, 197, 94, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Label
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.6)';
+            ctx.font = "11px 'JetBrains Mono', monospace";
+            ctx.fillText(distLabel, cx + r - 32, cy - 6);
+        }
+
+        // Crosshairs & Cardinal Directions
+        ctx.strokeStyle = 'rgba(34, 197, 94, 0.25)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - maxRadius);
+        ctx.lineTo(cx, cy + maxRadius);
+        ctx.moveTo(cx - maxRadius, cy);
+        ctx.lineTo(cx + maxRadius, cy);
+        ctx.stroke();
+
+        ctx.fillStyle = '#4ade80';
+        ctx.font = "12px 'JetBrains Mono', monospace";
+        ctx.textAlign = 'center';
+        ctx.fillText("N", cx, cy - maxRadius - 8);
+        ctx.fillText("S", cx, cy + maxRadius + 18);
+        ctx.fillText("E", cx + maxRadius + 14, cy + 4);
+        ctx.fillText("W", cx - maxRadius - 14, cy + 4);
+
+        // Sweeping Scan Beam
+        sweepAngle += 0.025;
+        const sweepX = cx + maxRadius * Math.cos(sweepAngle);
+        const sweepY = cy + maxRadius * Math.sin(sweepAngle);
+        ctx.strokeStyle = 'rgba(34, 197, 94, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(sweepX, sweepY);
+        ctx.stroke();
+
+        // Draw Footstep Trails & Targets for ALL connected phones
+        Object.values(targets).forEach(t => {
+            if (!t.path || t.path.length === 0) return;
+
+            // Draw Breadcrumb Path Line
+            if (t.path.length > 1) {
+                ctx.strokeStyle = t.color;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                t.path.forEach((pt, idx) => {
+                    const px = cx + (pt.x * scalePixelsPerMeter);
+                    const py = cy - (pt.y * scalePixelsPerMeter);
+                    if (idx === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                });
+                ctx.stroke();
+
+                // Draw Individual Footstep Nodes
+                t.path.forEach((pt) => {
+                    const px = cx + (pt.x * scalePixelsPerMeter);
+                    const py = cy - (pt.y * scalePixelsPerMeter);
+                    ctx.fillStyle = t.color;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+
+            // Current Target Position
+            const lastPt = t.path[t.path.length - 1];
+            const currX = cx + (lastPt.x * scalePixelsPerMeter);
+            const currY = cy - (lastPt.y * scalePixelsPerMeter);
+
+            // Pulsing Target Ring
+            ctx.strokeStyle = t.color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(currX, currY, 9 + Math.sin(sweepAngle * 4) * 3, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Solid Center Blip Dot
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(currX, currY, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Real-Time Directional Compass Arrow
+            const headingRad = ((t.heading || 0) - 90) * (Math.PI / 180);
+            const arrowLen = 24;
+            const tipX = currX + arrowLen * Math.cos(headingRad);
+            const tipY = currY + arrowLen * Math.sin(headingRad);
+
+            ctx.strokeStyle = t.color;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(currX, currY);
+            ctx.lineTo(tipX, tipY);
+            ctx.stroke();
+
+            // Arrowhead pointer
+            const headSize = 6;
+            ctx.fillStyle = t.color;
+            ctx.beginPath();
+            ctx.moveTo(tipX, tipY);
+            ctx.lineTo(tipX - headSize * Math.cos(headingRad - Math.PI / 6), tipY - headSize * Math.sin(headingRad - Math.PI / 6));
+            ctx.lineTo(tipX - headSize * Math.cos(headingRad + Math.PI / 6), tipY - headSize * Math.sin(headingRad + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+
+            // Target Label (#1, #2...) with Heading
+            ctx.fillStyle = t.color;
+            ctx.font = "bold 12px 'JetBrains Mono', monospace";
+            ctx.textAlign = 'left';
+            ctx.fillText(`#${t.id} [${Math.round(t.heading)}°]`, currX + 14, currY - 6);
+        });
+
+        requestAnimationFrame(drawRadar);
+    }
+    drawRadar();
+
+    // =========================================================================
+    // 5. TARGET TABLE SYNC
+    // =========================================================================
+    function updateTargetTable() {
+        const tbody = document.getElementById('target-table-body');
+        const activeTargets = Object.values(targets);
+
+        document.getElementById('active-target-count').innerText = `${activeTargets.length} DEVICES TRACKED`;
+
+        if (activeTargets.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#64748b; padding:24px;">Awaiting targets... Scan the QR code above with a smartphone to link.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = activeTargets.map(t => {
+            const isAlive = (Date.now() - t.lastSeen < 5000);
+            const statusHtml = isAlive 
+                ? `<span style="color:#22c55e;">● LIVE</span>` 
+                : `<span style="color:#ef4444;">● IDLE</span>`;
+
+            return `
+                <tr>
+                    <td>
+                        <span class="target-tag" style="background:${t.color}22; color:${t.color}; border:1px solid ${t.color}66;">
+                            <span class="pulse-dot" style="background:${t.color};"></span>
+                            #${t.id} ${t.colorName}
+                        </span>
+                    </td>
                     <td style="color:#f8fafc; font-weight:600;">${t.device} (${t.browser})</td>
                     <td style="color:#94a3b8;">${t.ip}<br><span style="font-size:0.75rem; color:#64748b;">${t.geo}</span></td>
                     <td style="color:#38bdf8; font-weight:700;">${t.steps} steps</td>
@@ -10,6 +666,7 @@
             `;
         }).join('');
     }
+
     // =========================================================================
     // 6. RANGE & RESET CONTROLS
     // =========================================================================
@@ -22,6 +679,7 @@
         else if (val === 100) document.getElementById('btn-100').classList.add('active');
         else if (val === 250) document.getElementById('btn-250').classList.add('active');
     }
+
     function resetAllTrails() {
         Object.values(targets).forEach(t => {
             t.steps = 0;
