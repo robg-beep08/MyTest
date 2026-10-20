@@ -28,53 +28,78 @@
             --warning: #f59e0b;
         }
 
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding: 15px; }
         .wrapper { max-width: 1200px; margin: auto; }
         
         /* Header */
         header { 
             display: flex; justify-content: space-between; align-items: center; 
-            border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 25px; 
+            border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 20px; 
             flex-wrap: wrap; gap: 10px;
         }
-        .header-title h1 { font-size: 1.5rem; margin: 0; color: #38bdf8; font-family: 'JetBrains Mono', monospace; }
-        .header-title .subtitle { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+        .header-title h1 { font-size: 1.4rem; margin: 0; color: #38bdf8; font-family: 'JetBrains Mono', monospace; }
+        .header-title .subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
         .status-box { display: flex; align-items: center; gap: 10px; }
         .status { 
             background: #064e3b; color: #34d399; padding: 6px 12px; border-radius: 20px; 
             font-size: 0.75rem; font-weight: 700; border: 1px solid #059669; font-family: 'JetBrains Mono', monospace; 
         }
 
-        /* Transmitter Banner (Only visible when connected to Radar Command Center) */
+        /* Transmitter Banner */
         #radar-sync-banner {
-            display: none;
-            background: #022c22;
-            border: 1px solid #10b981;
-            color: #34d399;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-align: center;
+            display: flex; justify-content: space-between; align-items: center;
+            background: #022c22; border: 1px solid #10b981; color: #34d399;
+            padding: 10px 16px; border-radius: 8px; margin-bottom: 20px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 600;
             box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
-            animation: pulse 2s infinite;
         }
 
-        /* Traceability / Uniqueness Score Banner */
+        /* Uniqueness Score Banner */
         .score-banner {
             background: linear-gradient(135deg, #0b1329 0%, #172554 100%);
-            border: 1px solid #1e3a8a; border-radius: 12px; padding: 20px;
-            margin-bottom: 25px; display: flex; justify-content: space-between;
+            border: 1px solid #1e3a8a; border-radius: 12px; padding: 16px 20px;
+            margin-bottom: 20px; display: flex; justify-content: space-between;
             align-items: center; flex-wrap: wrap; gap: 15px;
         }
-        .score-info h3 { margin: 0 0 6px 0; font-size: 1.1rem; color: #60a5fa; }
+        .score-info h3 { margin: 0 0 4px 0; font-size: 1.05rem; color: #60a5fa; }
         .score-info p { margin: 0; font-size: 0.8rem; color: var(--text-muted); max-width: 600px; }
         .score-gauge-box { text-align: right; }
-        .score-val { font-size: 1.8rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #f43f5e; }
-        .score-bar-bg { width: 140px; height: 8px; background: #1e293b; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+        .score-val { font-size: 1.6rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #f43f5e; }
+        .score-bar-bg { width: 130px; height: 7px; background: #1e293b; border-radius: 4px; overflow: hidden; margin-top: 4px; }
         .score-bar-fill { width: 99.4%; height: 100%; background: #f43f5e; }
+
+        /* Mobile Radar Card (Visible on Phone, Hidden on Notebook) */
+        #mobile-radar-card {
+            display: none; /* Managed by JS */
+            background: #061024; border: 1px solid rgba(34, 197, 94, 0.4);
+            border-radius: 12px; padding: 18px; margin-bottom: 20px;
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.2);
+        }
+        #mobile-radar-card h2 {
+            font-size: 1rem; margin: 0 0 12px 0; color: #4ade80;
+            display: flex; justify-content: space-between; align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .radar-display-wrap {
+            position: relative; width: 100%; aspect-ratio: 1/1; max-width: 340px; margin: 0 auto 15px auto;
+            background: radial-gradient(circle at center, #022c22 0%, #030712 80%);
+            border-radius: 10px; overflow: hidden; border: 1px solid rgba(34, 197, 94, 0.35);
+        }
+        #phoneRadarCanvas { width: 100%; height: 100%; display: block; }
+        
+        /* Tap-to-Activate Sensor Overlay */
+        #sensor-gate-overlay {
+            position: absolute; inset: 0; background: rgba(3, 7, 18, 0.88);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; padding: 20px; text-align: center; z-index: 10;
+            backdrop-filter: blur(3px);
+        }
+        .gate-btn {
+            background: #16a34a; color: white; border: 2px solid #4ade80;
+            padding: 12px 20px; border-radius: 8px; font-weight: 700; font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace; cursor: pointer;
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.4); animation: pulse 1.5s infinite;
+        }
 
         /* Grid */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
@@ -108,6 +133,13 @@
         .badge-red { background: #7f1d1d; color: #fca5a5; }
         .badge-amber { background: #78350f; color: #fde68a; }
 
+        .btn-sensor-action {
+            background: #1e293b; color: #f8fafc; border: 1px solid #334155;
+            padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; font-family: 'JetBrains Mono', monospace;
+        }
+        .btn-sensor-action:hover { background: #334155; }
+
         /* Action Bar */
         .action-bar { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; flex-wrap: wrap; }
         .btn-download {
@@ -116,13 +148,6 @@
             display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s;
         }
         .btn-download:hover { background: #1d4ed8; }
-
-        .btn-sensor-action {
-            background: #0284c7; color: white; border: 1px solid #38bdf8;
-            padding: 8px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;
-            cursor: pointer; transition: all 0.2s; font-family: 'JetBrains Mono', monospace;
-        }
-        .btn-sensor-action:hover { background: #0369a1; }
 
         /* Threat Matrix */
         .threat-matrix {
@@ -149,7 +174,48 @@
 <div class="wrapper">
     <!-- Active Transmitter Mode Banner -->
     <div id="radar-sync-banner">
-        🟢 TELEMETRY SYNCHRONIZED TO RADAR COMMAND CENTER
+        <span>🟢 LINKED TO RADAR COMMAND CENTER</span>
+        <span id="sync-session-badge" style="color: #38bdf8;">[SESSION: TACTICAL-RADAR]</span>
+    </div>
+
+    <!-- Mobile-Only Live Radar Screen (Automatically displayed on smartphones, hidden on notebooks) -->
+    <div id="mobile-radar-card">
+        <h2>
+            <span>🛰️ Live Kinetic Radar (PDR)</span>
+            <span id="phone-radar-status" style="font-size: 0.75rem; color: #4ade80;">● SENSORS STANDBY</span>
+        </h2>
+        
+        <div class="radar-display-wrap">
+            <canvas id="phoneRadarCanvas" width="340" height="340"></canvas>
+            
+            <!-- Sensor Activation Gate Overlay -->
+            <div id="sensor-gate-overlay" onclick="activateSensorsAndMotion()">
+                <div style="font-size: 2.2rem; margin-bottom: 10px;">⚡</div>
+                <button class="gate-btn">TAP TO UNLOCK SENSORS</button>
+                <div style="color: #94a3b8; font-size: 0.75rem; margin-top: 10px;">
+                    Required by iOS & Android to enable real-time motion & compass tracking
+                </div>
+            </div>
+        </div>
+
+        <div style="background: #030712; padding: 12px; border-radius: 8px; border: 1px solid #1e293b;">
+            <div class="row" style="margin-bottom: 6px;">
+                <span class="label">Footsteps Count</span>
+                <span id="phone-step-count" class="val" style="color: #4ade80; font-weight: 700; font-size: 1.1rem;">0 steps</span>
+            </div>
+            <div class="row" style="margin-bottom: 6px;">
+                <span class="label">Distance Covered</span>
+                <span id="phone-dist-count" class="val" style="color: #38bdf8; font-weight: 700;">0.0 m</span>
+            </div>
+            <div class="row" style="margin-bottom: 8px;">
+                <span class="label">Compass Bearing</span>
+                <span id="phone-heading-val" class="val" style="color: #f59e0b; font-weight: 600;">0° (North)</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-sensor-action" style="flex: 1; background: #2563eb; color: white;" onclick="triggerSimulatedStep()">🧪 TEST STEP (+1)</button>
+                <button class="btn-sensor-action" style="background: #7f1d1d; color: #fca5a5;" onclick="resetPhoneTrajectory()">🔄 RESET PATH</button>
+            </div>
+        </div>
     </div>
 
     <header>
@@ -222,31 +288,6 @@
             <div class="row"><span class="label">Gyroscope (Tilt)</span> <span id="sensor-orientation" class="val">Awaiting...</span></div>
             <div class="row"><span class="label">Accelerometer (G-Force)</span> <span id="sensor-motion" class="val">Awaiting...</span></div>
             <div class="row"><span class="label">Device Posture</span> <span id="sensor-posture" class="val">Detecting...</span></div>
-
-            <!-- Mobile Live Step Counter & Sensor Controls -->
-            <div id="pdr-panel" style="background: #030712; padding: 12px; border-radius: 8px; margin: 10px 0; border: 1px solid #1e293b;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 0.8rem; color: #38bdf8; font-weight: 600; font-family: 'JetBrains Mono', monospace;">🦶 KINETIC PDR TRACKER</span>
-                    <button class="btn-sensor-action" id="btn-calibrate" onclick="requestSensorAccess()">⚡ UNLOCK SENSORS</button>
-                </div>
-                <div class="row" style="margin-bottom: 6px;">
-                    <span class="label">Footsteps Count</span>
-                    <span id="pdr-steps-count" class="val" style="color: #4ade80; font-weight: 700; font-size: 1rem;">0 steps</span>
-                </div>
-                <div class="row" style="margin-bottom: 6px;">
-                    <span class="label">Distance Walked</span>
-                    <span id="pdr-distance" class="val" style="color: #38bdf8; font-weight: 700;">0.0 m</span>
-                </div>
-                <div class="row" style="margin-bottom: 8px;">
-                    <span class="label">Compass Bearing</span>
-                    <span id="pdr-heading" class="val" style="color: #f59e0b;">0° (North)</span>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn-sensor-action" style="flex: 1; background: #1e293b; border-color: #334155;" onclick="simulateManualStep()">🧪 TEST STEP (+1)</button>
-                    <button class="btn-sensor-action" style="background: #7f1d1d; border-color: #991b1b;" onclick="resetLocalSteps()">🔄 RESET</button>
-                </div>
-            </div>
-
             <div class="row"><span class="label">Window State</span> <span id="win-state" class="val">...</span></div>
             <div class="row"><span class="label">Display Scaling</span> <span id="scale-ratio" class="val">...</span></div>
             <div class="row"><span class="label">System Theme</span> <span id="sys-theme" class="val">...</span></div>
@@ -319,31 +360,38 @@
 
 <script>
     // =========================================================================
-    // 1. HARDWARE & CLIENT IDENTITY CACHE
+    // 1. SMART DEVICE DETECTION (PHONE vs NOTEBOOK)
     // =========================================================================
+    const ua = navigator.userAgent;
+    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || 
+                          (navigator.maxTouchPoints > 1 && window.innerWidth <= 1024);
+
+    // If mobile, show the kinetic radar card. If notebook, keep it hidden.
+    if (isMobileDevice) {
+        document.getElementById('mobile-radar-card').style.display = 'block';
+    }
+
+    // Hardware Identity Cache
     const clientAudit = {
-        device: "Detecting Device...",
-        browser: "Detecting Browser...",
-        ip: "...",
-        isp: "...",
-        geo: "...",
+        device: "Desktop Station",
+        browser: "Browser",
+        ip: "Detecting...",
+        isp: "Detecting...",
+        geo: "Determining...",
         lat: null,
         lon: null,
         battery: "N/A"
     };
 
-    // Synchronous immediate detection
-    (function detectImmediateEnvironment() {
-        const ua = navigator.userAgent;
-        let dev = "Desktop Station";
-        if (/iPhone/i.test(ua)) dev = "Apple iPhone";
-        else if (/iPad/i.test(ua)) dev = "Apple iPad";
+    (function identifyDevice() {
+        if (/iPhone/i.test(ua)) clientAudit.device = "Apple iPhone";
+        else if (/iPad/i.test(ua)) clientAudit.device = "Apple iPad";
         else if (/Android/i.test(ua)) {
-            const match = ua.match(/Android[^;]+; ([^)]+)\)/);
-            dev = match ? match[1] : "Android Mobile";
-        } else if (/Mac/i.test(ua)) dev = "Apple Mac";
-        else if (/Windows/i.test(ua)) dev = "Windows PC";
-        else if (/Linux/i.test(ua)) dev = "Linux Machine";
+            const m = ua.match(/Android[^;]+; ([^)]+)\)/);
+            clientAudit.device = m ? m[1] : "Android Smartphone";
+        } else if (/Mac/i.test(ua)) clientAudit.device = "Apple Mac";
+        else if (/Windows/i.test(ua)) clientAudit.device = "Windows PC";
+        else if (/Linux/i.test(ua)) clientAudit.device = "Linux Machine";
 
         let b = "Browser";
         if (ua.includes("Edg/")) b = "Edge";
@@ -351,48 +399,64 @@
         else if (ua.includes("Chrome/")) b = "Chrome";
         else if (ua.includes("Safari/")) b = "Safari";
         else if (ua.includes("Firefox/")) b = "Firefox";
-
-        clientAudit.device = dev;
         clientAudit.browser = b;
     })();
 
     // =========================================================================
-    // 2. WEBRTC STREAMING TO RADAR COMMAND CENTER (PEERJS)
+    // 2. UNIFIED WEBRTC STREAMING TO RADAR COMMAND CENTER
     // =========================================================================
+    // Shared default room allows instant connection from slide QR code!
+    const DEFAULT_ROOM = 'TACTICAL-RADAR';
     const urlParams = new URLSearchParams(window.location.search);
-    const radarRoom = urlParams.get('room');
-    let peerConn = null;
+    const radarRoom = urlParams.get('room') || DEFAULT_ROOM;
+
+    document.getElementById('sync-session-badge').innerText = `[SESSION: ${radarRoom}]`;
+
     let clientPeer = null;
+    let peerConn = null;
 
-    if (radarRoom) {
-        document.getElementById('radar-sync-banner').style.display = 'block';
-        document.getElementById('radar-sync-banner').innerText = `🟢 TARGET STREAMING TO RADAR [SESSION: ${radarRoom}]`;
+    function initRadarStreaming() {
+        try {
+            clientPeer = new Peer();
+            clientPeer.on('open', (id) => {
+                console.log("Client WebRTC active:", id);
+                peerConn = clientPeer.connect(radarRoom, { reliable: true });
 
-        clientPeer = new Peer();
-        clientPeer.on('open', () => {
-            peerConn = clientPeer.connect(radarRoom, { reliable: true });
-            
-            peerConn.on('open', () => {
-                console.log("Connected to Radar Command Center:", radarRoom);
-                dispatchTelemetry(false);
+                peerConn.on('open', () => {
+                    console.log("Connected to Command Center:", radarRoom);
+                    document.getElementById('radar-sync-banner').style.background = "#022c22";
+                    document.getElementById('radar-sync-banner').style.color = "#4ade80";
+                    dispatchTelemetry(false);
+                });
+
+                peerConn.on('close', () => {
+                    console.log("Disconnected, retrying in 3s...");
+                    setTimeout(initRadarStreaming, 3000);
+                });
+
+                peerConn.on('error', (err) => {
+                    console.warn("Peer connection error:", err);
+                });
             });
 
-            peerConn.on('error', (err) => {
-                console.warn("Peer connection warning:", err);
+            clientPeer.on('error', (err) => {
+                console.warn("Peer client error:", err);
             });
-        });
+        } catch (e) {
+            console.warn("PeerJS initialization error:", e);
+        }
     }
+    initRadarStreaming();
 
-    // Steady 4 Hz heartbeat stream to Command Center
+    // 4Hz Heartbeat to Command Center
     setInterval(() => {
         if (peerConn && peerConn.open) {
             dispatchTelemetry(false);
         }
     }, 250);
 
-    function dispatchTelemetry(stepFlag = false) {
+    function dispatchTelemetry(isStep = false) {
         if (!peerConn || !peerConn.open) return;
-
         try {
             peerConn.send({
                 type: 'telemetry',
@@ -404,47 +468,172 @@
                 lat: clientAudit.lat,
                 lon: clientAudit.lon,
                 battery: clientAudit.battery,
-                step: stepFlag,
+                step: isStep,
                 stepCount: localSteps,
                 distance: parseFloat((localSteps * 0.72).toFixed(1)),
                 heading: Math.round(smoothHeading),
-                posture: targetPosture,
-                accMag: lastAccDelta.toFixed(1)
+                posture: targetPosture
             });
-        } catch (e) {
-            console.warn("Telemetry transmission error:", e);
-        }
+        } catch(e) {}
     }
 
     // =========================================================================
-    // 3. KINETIC STEP DETECTION & SENSOR PROCESSING (PDR)
+    // 3. MOBILE LOCAL RADAR CANVAS & KINETIC PDR TRACKER
     // =========================================================================
-    let hasSensors = false;
     let localSteps = 0;
     let smoothHeading = 0;
     let targetPosture = "STATIONARY";
-    let lastAccDelta = 0.0;
-    
-    // Dynamic Gravity Baseline Exponential Moving Average
-    let dynamicGravity = 9.8;
-    let lastStepTimestamp = 0;
-    const STEP_COOLDOWN_MS = 320; // Max ~3 steps per second for human walking
+    let myTrajectory = [{ x: 0, y: 0 }];
+    let hasSensors = false;
 
-    // Vector smoothing for compass (handles 0°/360° wrapping smoothly)
+    // Compass Vector Smoothing
     let avgSin = 0;
     let avgCos = 1;
 
+    // Dynamic Step Acceleration Filter
+    let dynamicGravity = 9.8;
+    let lastStepTime = 0;
+
+    const phoneCanvas = document.getElementById('phoneRadarCanvas');
+    const pCtx = phoneCanvas.getContext('2d');
+    let phoneSweepAngle = 0;
+
+    function drawPhoneRadar() {
+        const w = phoneCanvas.width;
+        const h = phoneCanvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+        const maxR = cx - 20;
+
+        // Auto-scale radar to phone's own distance
+        let maxDist = 15;
+        myTrajectory.forEach(pt => {
+            const d = Math.sqrt(pt.x * pt.x + pt.y * pt.y);
+            if (d > maxDist) maxDist = d;
+        });
+        const radarRangeMeters = maxDist * 1.25;
+        const scale = maxR / radarRangeMeters;
+
+        // Background
+        pCtx.fillStyle = '#030712';
+        pCtx.fillRect(0, 0, w, h);
+
+        // Concentric Rings
+        for (let i = 1; i <= 3; i++) {
+            const r = maxR * (i / 3);
+            pCtx.strokeStyle = 'rgba(34, 197, 94, 0.25)';
+            pCtx.lineWidth = 1;
+            pCtx.beginPath();
+            pCtx.arc(cx, cy, r, 0, Math.PI * 2);
+            pCtx.stroke();
+
+            pCtx.fillStyle = 'rgba(34, 197, 94, 0.6)';
+            pCtx.font = "10px 'JetBrains Mono', monospace";
+            pCtx.fillText(Math.round(radarRangeMeters * (i / 3)) + "m", cx + r - 26, cy - 4);
+        }
+
+        // Crosshairs
+        pCtx.strokeStyle = 'rgba(34, 197, 94, 0.3)';
+        pCtx.beginPath();
+        pCtx.moveTo(cx, cy - maxR); pCtx.lineTo(cx, cy + maxR);
+        pCtx.moveTo(cx - maxR, cy); pCtx.lineTo(cx + maxR, cy);
+        pCtx.stroke();
+
+        // Cardinal Directions
+        pCtx.fillStyle = '#4ade80';
+        pCtx.font = "11px 'JetBrains Mono', monospace";
+        pCtx.textAlign = 'center';
+        pCtx.fillText("N", cx, cy - maxR - 4);
+        pCtx.fillText("S", cx, cy + maxR + 14);
+        pCtx.fillText("E", cx + maxR + 10, cy + 4);
+        pCtx.fillText("W", cx - maxR - 10, cy + 4);
+
+        // Sweep Line
+        phoneSweepAngle += 0.03;
+        pCtx.strokeStyle = 'rgba(34, 197, 94, 0.45)';
+        pCtx.lineWidth = 1.5;
+        pCtx.beginPath();
+        pCtx.moveTo(cx, cy);
+        pCtx.lineTo(cx + maxR * Math.cos(phoneSweepAngle), cy + maxR * Math.sin(phoneSweepAngle));
+        pCtx.stroke();
+
+        // Draw My Breadcrumb Trail
+        if (myTrajectory.length > 1) {
+            pCtx.strokeStyle = '#38bdf8';
+            pCtx.lineWidth = 3;
+            pCtx.beginPath();
+            myTrajectory.forEach((pt, idx) => {
+                const px = cx + (pt.x * scale);
+                const py = cy - (pt.y * scale);
+                if (idx === 0) pCtx.moveTo(px, py);
+                else pCtx.lineTo(px, py);
+            });
+            pCtx.stroke();
+
+            // Footstep Nodes
+            myTrajectory.forEach(pt => {
+                const px = cx + (pt.x * scale);
+                const py = cy - (pt.y * scale);
+                pCtx.fillStyle = '#4ade80';
+                pCtx.beginPath();
+                pCtx.arc(px, py, 2.5, 0, Math.PI * 2);
+                pCtx.fill();
+            });
+        }
+
+        // Current Position Dot
+        const last = myTrajectory[myTrajectory.length - 1];
+        const curX = cx + (last.x * scale);
+        const curY = cy - (last.y * scale);
+
+        // Pulsing Ring
+        pCtx.strokeStyle = '#38bdf8';
+        pCtx.lineWidth = 2;
+        pCtx.beginPath();
+        pCtx.arc(curX, curY, 8 + Math.sin(phoneSweepAngle * 4) * 2, 0, Math.PI * 2);
+        pCtx.stroke();
+
+        pCtx.fillStyle = '#ffffff';
+        pCtx.beginPath();
+        pCtx.arc(curX, curY, 4, 0, Math.PI * 2);
+        pCtx.fill();
+
+        // Heading Direction Pointer (Arrow)
+        const rad = ((smoothHeading || 0) - 90) * (Math.PI / 180);
+        const arrowLen = 22;
+        const tipX = curX + arrowLen * Math.cos(rad);
+        const tipY = curY + arrowLen * Math.sin(rad);
+
+        pCtx.strokeStyle = '#f59e0b';
+        pCtx.lineWidth = 2.5;
+        pCtx.beginPath();
+        pCtx.moveTo(curX, curY);
+        pCtx.lineTo(tipX, tipY);
+        pCtx.stroke();
+
+        pCtx.fillStyle = '#f59e0b';
+        pCtx.beginPath();
+        pCtx.moveTo(tipX, tipY);
+        pCtx.lineTo(tipX - 6 * Math.cos(rad - Math.PI / 6), tipY - 6 * Math.sin(rad - Math.PI / 6));
+        pCtx.lineTo(tipX - 6 * Math.cos(rad + Math.PI / 6), tipY - 6 * Math.sin(rad + Math.PI / 6));
+        pCtx.closePath();
+        pCtx.fill();
+
+        requestAnimationFrame(drawPhoneRadar);
+    }
+    if (isMobileDevice) drawPhoneRadar();
+
+    // =========================================================================
+    // 4. KINETIC SENSOR PROCESSING & ACTIVATION
+    // =========================================================================
     function handleOrientation(event) {
         if (event.alpha !== null || event.beta !== null || event.gamma !== null) {
             hasSensors = true;
-            document.getElementById('btn-calibrate').innerText = "🟢 SENSORS ACTIVE";
-            document.getElementById('btn-calibrate').style.background = "#064e3b";
-
             const beta = event.beta !== null ? parseFloat(event.beta) : 0;
             const gamma = event.gamma !== null ? parseFloat(event.gamma) : 0;
             const alpha = event.alpha !== null ? parseFloat(event.alpha) : 0;
 
-            // Circular vector smoothing for compass bearing
+            // Circular vector smoothing for compass
             const rad = alpha * (Math.PI / 180);
             avgSin = 0.25 * Math.sin(rad) + 0.75 * avgSin;
             avgCos = 0.25 * Math.cos(rad) + 0.75 * avgCos;
@@ -452,52 +641,41 @@
             if (deg < 0) deg += 360;
             smoothHeading = deg;
 
-            // Cardinal direction text
             const cardinals = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-            const cardIdx = Math.round(smoothHeading / 45) % 8;
-            document.getElementById('pdr-heading').innerText = `${Math.round(smoothHeading)}° (${cardinals[cardIdx]})`;
+            const card = cardinals[Math.round(smoothHeading / 45) % 8];
+            const headingStr = `${Math.round(smoothHeading)}° (${card})`;
+            
+            document.getElementById('phone-heading-val').innerText = headingStr;
             document.getElementById('sensor-orientation').innerText = `β: ${beta.toFixed(1)}°, γ: ${gamma.toFixed(1)}° (α: ${smoothHeading.toFixed(1)}°)`;
 
-            // Inferred device posture
+            // Device Posture
             let posture = "Handheld (Tilted)";
-            if (Math.abs(beta) < 18 && Math.abs(gamma) < 18) {
-                posture = "Horizontal (Flat on Desk/Table)";
-            } else if (beta > 60 && beta < 110) {
-                posture = "Vertical (Upright / Eyeline)";
-            } else if (beta < -60 && beta > -110) {
-                posture = "Vertical Inverted (Upside Down)";
-            } else if (Math.abs(gamma) > 55) {
-                posture = "Landscape (Horizontal Media Mode)";
-            }
+            if (Math.abs(beta) < 18 && Math.abs(gamma) < 18) posture = "Horizontal (Flat on Table)";
+            else if (beta > 60 && beta < 110) posture = "Vertical (Upright / Eyeline)";
+            else if (beta < -60 && beta > -110) posture = "Vertical Inverted (Upside Down)";
+            else if (Math.abs(gamma) > 55) posture = "Landscape (Media Mode)";
+            
             targetPosture = posture;
             document.getElementById('sensor-posture').innerText = posture;
         }
     }
 
     function handleMotion(event) {
-        // Handle devices supplying acceleration or accelerationIncludingGravity
         const acc = event.accelerationIncludingGravity || event.acceleration;
         if (!acc) return;
-
-        const x = acc.x ?? 0;
-        const y = acc.y ?? 0;
-        const z = acc.z ?? 0;
+        const x = acc.x ?? 0, y = acc.y ?? 0, z = acc.z ?? 0;
 
         if (x !== 0 || y !== 0 || z !== 0) {
             hasSensors = true;
             document.getElementById('sensor-motion').innerText = `X:${x.toFixed(1)} Y:${y.toFixed(1)} Z:${z.toFixed(1)} m/s²`;
 
             const mag = Math.sqrt(x * x + y * y + z * z);
-            
-            // Adapt baseline to current environment (whether ~9.8 or ~0)
             dynamicGravity = 0.90 * dynamicGravity + 0.10 * mag;
             const delta = Math.abs(mag - dynamicGravity);
-            lastAccDelta = delta;
 
             const now = performance.now();
-            // Human footstep peak threshold (1.2 m/s² dynamic peak above baseline)
-            if (delta > 1.2 && (now - lastStepTimestamp > STEP_COOLDOWN_MS)) {
-                lastStepTimestamp = now;
+            if (delta > 1.2 && (now - lastStepTime > 320)) {
+                lastStepTime = now;
                 registerStep();
             }
         }
@@ -505,31 +683,44 @@
 
     function registerStep() {
         localSteps++;
-        const dist = (localSteps * 0.72).toFixed(1);
-        document.getElementById('pdr-steps-count').innerText = `${localSteps} steps`;
-        document.getElementById('pdr-distance').innerText = `${dist} m`;
+        const stride = 0.72;
+        const dist = (localSteps * stride).toFixed(1);
+
+        document.getElementById('phone-step-count').innerText = `${localSteps} steps`;
+        document.getElementById('phone-dist-count').innerText = `${dist} m`;
+
+        // Update local trajectory
+        const rad = (smoothHeading || 0) * (Math.PI / 180);
+        const last = myTrajectory[myTrajectory.length - 1];
+        const nextX = last.x + (stride * Math.sin(rad));
+        const nextY = last.y + (stride * Math.cos(rad));
+        myTrajectory.push({ x: nextX, y: nextY });
+        if (myTrajectory.length > 500) myTrajectory.shift();
+
         dispatchTelemetry(true);
     }
 
-    function simulateManualStep() {
+    function triggerSimulatedStep() {
         registerStep();
     }
 
-    function resetLocalSteps() {
+    function resetPhoneTrajectory() {
         localSteps = 0;
-        document.getElementById('pdr-steps-count').innerText = "0 steps";
-        document.getElementById('pdr-distance').innerText = "0.0 m";
+        myTrajectory = [{ x: 0, y: 0 }];
+        document.getElementById('phone-step-count').innerText = "0 steps";
+        document.getElementById('phone-dist-count').innerText = "0.0 m";
         dispatchTelemetry(false);
     }
 
-    // Permission and Sensor Activation (iOS 13+ and Android Chrome)
-    function requestSensorAccess() {
+    // Permission and Sensor Activation (iOS 13+ & Android)
+    function activateSensorsAndMotion() {
+        document.getElementById('sensor-gate-overlay').style.display = 'none';
+        document.getElementById('phone-radar-status').innerText = "🟢 RADAR ACTIVE & STREAMING";
+
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             DeviceOrientationEvent.requestPermission()
                 .then(resp => {
-                    if (resp === 'granted') {
-                        window.addEventListener('deviceorientation', handleOrientation, true);
-                    }
+                    if (resp === 'granted') window.addEventListener('deviceorientation', handleOrientation, true);
                 }).catch(console.warn);
         } else {
             window.addEventListener('deviceorientation', handleOrientation, true);
@@ -538,37 +729,28 @@
         if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
             DeviceMotionEvent.requestPermission()
                 .then(resp => {
-                    if (resp === 'granted') {
-                        window.addEventListener('devicemotion', handleMotion, true);
-                    }
+                    if (resp === 'granted') window.addEventListener('devicemotion', handleMotion, true);
                 }).catch(console.warn);
         } else {
             window.addEventListener('devicemotion', handleMotion, true);
         }
-
-        document.getElementById('btn-calibrate').innerText = "CALIBRATING...";
-        setTimeout(() => {
-            document.getElementById('btn-calibrate').innerText = hasSensors ? "🟢 SENSORS ACTIVE" : "⚡ UNLOCK SENSORS";
-        }, 1200);
     }
 
-    // Auto-listen to motion events
-    window.addEventListener('deviceorientation', handleOrientation, true);
-    window.addEventListener('devicemotion', handleMotion, true);
-    window.addEventListener('touchstart', requestSensorAccess, { once: true });
-    window.addEventListener('click', requestSensorAccess, { once: true });
+    window.addEventListener('touchstart', () => {
+        if (!hasSensors && isMobileDevice) activateSensorsAndMotion();
+    }, { once: true });
 
-    // Desktop PC fallback notice
+    // Notebook fallback note
     setTimeout(() => {
-        if (!hasSensors) {
-            document.getElementById('sensor-orientation').innerText = "Desktop Station (No Kinetic Gyro)";
-            document.getElementById('sensor-motion').innerText = "Desktop (Stationary Base)";
-            document.getElementById('sensor-posture').innerText = "Stationary (Desk Workstation)";
+        if (!isMobileDevice) {
+            document.getElementById('sensor-orientation').innerText = "Desktop PC (No Kinetic Gyro)";
+            document.getElementById('sensor-motion').innerText = "Stationary Workstation";
+            document.getElementById('sensor-posture').innerText = "Fixed Desk Station";
         }
-    }, 2000);
+    }, 1500);
 
     // =========================================================================
-    // 4. FORENSIC CRYPTOGRAPHY & FINGERPRINTING
+    // 5. FORENSIC AUDIT EXTRACTION & CRYPTOGRAPHY
     // =========================================================================
     async function sha256(message) {
         try {
@@ -679,7 +861,7 @@
     }
 
     // =========================================================================
-    // 5. MAIN AUDIT EXTRACTION & SILENT GOOGLE FORM DISPATCH
+    // 6. DOM DATA EXTRACTION & SILENT GOOGLE DISPATCH
     // =========================================================================
     window.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('sys-tz').innerText = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -761,7 +943,7 @@
             incognitoBadge.innerText = "Standard (Not Active)";
         }
 
-        // --- RESILIENT GEOLOCATION (OpenStreetMap) ---
+        // --- GEOLOCATION EXTRACTION ---
         async function runNet() {
             const sources = [
                 { url: 'https://ipwho.is/', type: 'IpWhoIs' },
@@ -771,55 +953,28 @@
             ];
 
             let success = false;
-
             for (const source of sources) {
                 if(success) break;
-
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3500);
 
                 try {
                     const res = await fetch(source.url, { signal: controller.signal });
                     clearTimeout(timeoutId);
-                    
                     if(!res.ok) throw new Error("HTTP " + res.status);
                     const data = await res.json();
                     
                     let ip, isp, city, country, lat, lon;
-
                     if(source.type === 'IpWhoIs') {
                         if(data.success === false) throw new Error("RateLimit");
-                        ip = data.ip; 
-                        isp = data.connection?.isp || data.connection?.org || data.org; 
-                        city = data.city; 
-                        country = data.country;
-                        lat = data.latitude; 
-                        lon = data.longitude;
-                    }
-                    else if(source.type === 'FreeIpApi') {
-                        ip = data.ipAddress; 
-                        isp = data.isp || "Generic ISP"; 
-                        city = data.cityName; 
-                        country = data.countryName;
-                        lat = data.latitude; 
-                        lon = data.longitude;
-                    }
-                    else if (source.type === 'IpApi') {
+                        ip = data.ip; isp = data.connection?.isp || data.org; city = data.city; country = data.country; lat = data.latitude; lon = data.longitude;
+                    } else if(source.type === 'FreeIpApi') {
+                        ip = data.ipAddress; isp = data.isp || "Generic ISP"; city = data.cityName; country = data.countryName; lat = data.latitude; lon = data.longitude;
+                    } else if (source.type === 'IpApi') {
                         if(data.error) throw new Error("RateLimit");
-                        ip = data.ip; 
-                        isp = data.org || data.isp; 
-                        city = data.city; 
-                        country = data.country_name;
-                        lat = data.latitude; 
-                        lon = data.longitude;
-                    }
-                    else if (source.type === 'DbIp') {
-                        ip = data.ipAddress; 
-                        isp = "Generic ISP"; 
-                        city = data.city; 
-                        country = data.countryName;
-                        lat = null; 
-                        lon = null;
+                        ip = data.ip; isp = data.org || data.isp; city = data.city; country = data.country_name; lat = data.latitude; lon = data.longitude;
+                    } else if (source.type === 'DbIp') {
+                        ip = data.ipAddress; isp = "Generic ISP"; city = data.city; country = data.countryName; lat = null; lon = null;
                     }
 
                     if(!ip) throw new Error("Incomplete");
@@ -834,17 +989,11 @@
                     clientAudit.lat = lat;
                     clientAudit.lon = lon;
 
-                    // Render Map with OpenStreetMap (Free, No API Key Required)
-                    if (lat !== null && lon !== null && lat !== undefined && lon !== undefined && typeof L !== 'undefined') {
+                    if (lat !== null && lon !== null && typeof L !== 'undefined') {
                         document.getElementById('map').innerHTML = ""; 
                         const map = L.map('map', {zoomControl: false}).setView([lat, lon], 11);
-                        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            maxZoom: 19,
-                            attribution: '&copy; OpenStreetMap'
-                        }).addTo(map);
+                        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
                         L.marker([lat, lon]).addTo(map);
-                    } else {
-                        document.getElementById('map').innerHTML = "<div style='padding:20px; text-align:center; color:var(--text-muted); font-size:0.8rem;'>Map unavailable (Coordinates missing)</div>";
                     }
 
                     success = true;
@@ -855,17 +1004,16 @@
             }
 
             if (!success) {
-                document.getElementById('ip').innerText = "Blocked/Error";
-                document.getElementById('isp').innerText = "N/A";
-                document.getElementById('geo').innerText = "N/A";
-                document.getElementById('map').innerHTML = "<div style='padding:20px; text-align:center; color:var(--alert); font-size:0.8rem;'>API Connection Failed (AdBlock Active)</div>";
+                document.getElementById('ip').innerText = "Active";
+                document.getElementById('isp').innerText = "Protected";
+                document.getElementById('geo').innerText = "Anonymous";
             }
             
             runForensics();
         }
         runNet();
 
-        // --- FORENSICS ---
+        // --- FORENSICS & GOOGLE DISPATCH ---
         async function runForensics() {
             const fpCanvas = await getAdvancedCanvasFingerprint();
             document.getElementById('fp').innerText = fpCanvas;
@@ -890,7 +1038,6 @@
             setTimeout(sendToGoogle, 1500);
         }
 
-        // --- SILENT GOOGLE DISPATCH ---
         function sendToGoogle() {
             const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSdRv7xlOOJmbtaIjdOckZgrPWmW-czdyz8-Gd5SReySLKmQkg/formResponse";
             const p = new URLSearchParams();
