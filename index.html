@@ -5,58 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Device Audit | Tactical Digital Awareness</title>
     
-    <!-- Leaflet & OpenStreetMap (Free, No API Key Required) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-    
-    <!-- PeerJS for Real-Time Peer-to-Peer Live Radar Tracking -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-    
-    <!-- QRCode Generator for Instant Mobile Linking -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
         :root { 
-            --primary: #1e293b;    /* Deep Slate */
-            --accent: #2563eb;     /* Electric Blue */
-            --bg: #0f172a;         /* Dark Tactical Navy */
-            --card-bg: #1e293b;    /* Dark Card */
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #334155;
-            --alert: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-            --radar-green: #22c55e;
-            --radar-grid: rgba(34, 197, 94, 0.15);
+            --primary: #1e293b; --accent: #2563eb; --bg: #0f172a; 
+            --card-bg: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; 
+            --border: #334155; --alert: #ef4444; --warning: #f59e0b; --success: #10b981;
         }
 
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; }
-        .wrapper { max-width: 1440px; margin: auto; }
+        .wrapper { max-width: 1400px; margin: auto; }
         
         header { 
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 20px; padding: 20px 24px; background: var(--card-bg); 
-            border-radius: 12px; border: 1px solid var(--border);
-            flex-wrap: wrap; gap: 15px;
+            border-radius: 12px; border: 1px solid var(--border); flex-wrap: wrap; gap: 15px;
         }
         .header-title h1 { font-size: 1.4rem; margin: 0; color: #ffffff; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; }
         .header-title .subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
         .status-box { display: flex; align-items: center; gap: 12px; }
         .status { font-size: 0.8rem; color: #38bdf8; font-weight: bold; animation: pulse 2s infinite; font-family: 'JetBrains Mono', monospace; }
 
-        /* Target Transmitter Banner (Visible when smartphone connects as target) */
-        #target-banner {
-            display: none; background: linear-gradient(90deg, #b91c1c, #dc2626);
-            color: white; padding: 14px 20px; border-radius: 10px; margin-bottom: 20px;
-            font-size: 0.85rem; font-weight: 700; text-align: center;
-            letter-spacing: 1px; animation: pulse 1.5s infinite;
+        #radar-sync-banner {
+            display: none; background: linear-gradient(90deg, #059669, #10b981);
+            color: #ffffff; padding: 12px 20px; border-radius: 10px; margin-bottom: 20px;
+            font-size: 0.85rem; font-weight: 700; text-align: center; letter-spacing: 0.5px;
+            font-family: 'JetBrains Mono', monospace; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
         }
 
-        /* Device Traceability / Uniqueness Banner */
         .score-banner {
             background: linear-gradient(135deg, #1e293b 0%, #090d16 100%);
             color: white; border-radius: 12px; padding: 18px 24px; margin-bottom: 25px;
@@ -70,60 +50,19 @@
         .score-bar-bg { width: 100%; background: #334155; height: 10px; border-radius: 99px; overflow: hidden; }
         .score-bar-fill { height: 100%; width: 99.4%; background: linear-gradient(90deg, #f59e0b, #ef4444, #e11d48); border-radius: 99px; }
 
-        /* Tactical Radar Section (Live Inertial Odometry PDR) */
-        .radar-card {
-            background: #0b1120; border-radius: 12px; padding: 22px; margin-bottom: 25px;
-            border: 1px solid rgba(34, 197, 94, 0.3); box-shadow: 0 0 25px rgba(34, 197, 94, 0.08);
+        /* Mobile Personal Radar (Hidden on Laptops) */
+        #mobile-radar-card {
+            display: none; background: #0b1120; border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 12px; padding: 18px; margin-bottom: 25px;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
         }
-        .radar-header {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;
-            flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 12px;
-        }
-        .radar-header h2 { margin: 0; font-size: 1.1rem; color: var(--radar-green); display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; }
-        .radar-status { font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; padding: 4px 10px; border-radius: 6px; }
-        .status-searching { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-        .status-locked { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); animation: pulse 1.5s infinite; }
+        #mobile-radar-card h2 { color: #4ade80; font-family: 'JetBrains Mono', monospace; margin: 0 0 12px 0; font-size: 1rem; border-bottom: 1px solid #1e293b; padding-bottom: 8px; }
+        .mobile-radar-wrap { width: 100%; aspect-ratio: 16/10; max-height: 280px; background: radial-gradient(circle at center, #022c22 0%, #030712 80%); border-radius: 8px; overflow: hidden; }
+        #personalRadarCanvas { width: 100%; height: 100%; display: block; }
+        .mobile-radar-stats { display: flex; justify-content: space-around; margin-top: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #38bdf8; }
 
-        .radar-layout {
-            display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: center;
-        }
-        @media (max-width: 900px) {
-            .radar-layout { grid-template-columns: 1fr; }
-        }
-
-        .radar-canvas-container {
-            position: relative; width: 100%; aspect-ratio: 16/9; max-height: 380px;
-            background: radial-gradient(circle at center, #022c22 0%, #030712 75%);
-            border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.3); overflow: hidden;
-            display: flex; justify-content: center; align-items: center;
-        }
-        #radarCanvas { width: 100%; height: 100%; display: block; }
-
-        .radar-telemetry {
-            background: #111827; border-radius: 8px; padding: 18px; border: 1px solid #1f2937;
-            display: flex; flex-direction: column; gap: 12px;
-        }
-        .telemetry-row { display: flex; justify-content: space-between; font-size: 0.85rem; border-bottom: 1px solid #1e293b; padding-bottom: 6px; }
-        .telemetry-label { color: #94a3b8; }
-        .telemetry-val { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #38bdf8; }
-
-        .qr-box-container {
-            display: flex; flex-direction: column; align-items: center; margin-top: 10px;
-            background: #030712; padding: 14px; border-radius: 8px; border: 1px dashed rgba(56, 189, 248, 0.4);
-        }
-        .qr-title { font-size: 0.75rem; color: #38bdf8; font-family: 'JetBrains Mono', monospace; margin-bottom: 10px; text-transform: uppercase; text-align: center; }
-        #radar-qr { background: white; padding: 8px; border-radius: 6px; }
-        .qr-help { font-size: 0.7rem; color: #64748b; margin-top: 8px; text-align: center; }
-
-        /* Standard Cards Grid */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
-
-        .card { 
-            background: var(--card-bg); border-radius: 12px; padding: 20px; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); border: 1px solid var(--border);
-            display: flex; flex-direction: column;
-        }
-
+        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); border: 1px solid var(--border); display: flex; flex-direction: column; }
         h2 { font-size: 1rem; color: #f8fafc; border-bottom: 2px solid #334155; padding-bottom: 10px; margin-top: 0; font-weight: 600; display: flex; align-items: center; gap: 8px; }
 
         .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #273549; font-size: 0.85rem; }
@@ -134,54 +73,32 @@
         .badge-green { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
         .badge-amber { background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.4); }
 
-        /* Meters */
         .meter-container { width: 100%; background: #334155; height: 6px; border-radius: 10px; margin-top: 5px; }
         .meter-bar { height: 100%; width: 0%; background: var(--accent); border-radius: 10px; transition: width 1s; }
 
-        .ua-box { 
-            background: #0f172a; border: 1px solid var(--border); border-radius: 6px; 
-            padding: 10px; margin-top: 15px; font-size: 0.7rem; color: #94a3b8; 
-            font-family: 'JetBrains Mono', 'Courier New', monospace; word-break: break-all;
-        }
-
-        /* Map with OpenStreetMap */
+        .ua-box { background: #0f172a; border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-top: 15px; font-size: 0.7rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace; word-break: break-all; }
         #map { height: 180px; width: 100%; margin-top: 15px; border-radius: 8px; border: 1px solid var(--border); }
 
-        /* Action Bar */
         .action-bar { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; flex-wrap: wrap; }
-        .btn-download {
-            background: #2563eb; color: white; border: none; padding: 12px 20px;
-            border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
-            display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s;
-        }
+        .btn-download { background: #2563eb; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s; }
         .btn-download:hover { background: #1d4ed8; }
 
-        /* Threat Matrix */
-        .threat-matrix {
-            margin-top: 30px; background: var(--card-bg); border-radius: 12px; padding: 24px;
-            border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
-        }
+        .threat-matrix { margin-top: 30px; background: var(--card-bg); border-radius: 12px; padding: 24px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
         .threat-matrix h2 { border-bottom: 2px solid #334155; padding-bottom: 12px; margin-bottom: 15px; }
         .threat-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         .threat-table th { text-align: left; padding: 10px; background: #0f172a; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
         .threat-table td { padding: 10px; border-bottom: 1px solid #273549; vertical-align: top; }
         .threat-table tr:hover { background: #192337; }
 
-        #google-toast { 
-            position: fixed; bottom: 20px; right: 20px; background: #059669; color: white; 
-            padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; display: none; z-index: 999;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4); font-weight: 600; font-family: 'JetBrains Mono', monospace;
-        }
-
+        #google-toast { position: fixed; bottom: 20px; right: 20px; background: #059669; color: white; padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; display: none; z-index: 999; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
-    <!-- Active Transmitter Mode Notice (When opened via QR code) -->
-    <div id="target-banner">
-        🚨 TRANSMITTER MODE ACTIVE: STREAMING KINETIC SENSORS DIRECTLY TO RADAR COMMAND CENTER
+    <div id="radar-sync-banner">
+        🟢 TELEMETRY SYNCHRONIZED TO RADAR COMMAND CENTER
     </div>
 
     <header>
@@ -194,7 +111,6 @@
         </div>
     </header>
 
-    <!-- Device Traceability / Uniqueness Banner -->
     <div class="score-banner">
         <div class="score-info">
             <h3>🛡️ Device Traceability Index</h3>
@@ -206,50 +122,20 @@
         </div>
     </div>
 
-    <!-- TACTICAL RADAR (P2P INERTIAL ODOMETRY & STEP TRACKING) -->
-    <div class="radar-card">
-        <div class="radar-header">
-            <h2>🛰️ Tactical Kinetic Radar | Pedestrian Dead Reckoning (PDR)</h2>
-            <div id="radar-status-badge" class="radar-status status-searching">STANDALONE / AWAITING REMOTE TARGET</div>
+    <!-- Personal Mobile Radar (Only active on mobile devices) -->
+    <div id="mobile-radar-card">
+        <h2>🛰️ Personal Kinetic Radar (Footsteps Path)</h2>
+        <div class="mobile-radar-wrap">
+            <canvas id="personalRadarCanvas" width="600" height="280"></canvas>
         </div>
-        <div class="radar-layout">
-            <div class="radar-canvas-container">
-                <canvas id="radarCanvas" width="700" height="380"></canvas>
-            </div>
-            <div class="radar-telemetry">
-                <div class="telemetry-row">
-                    <span class="telemetry-label">Target Link</span>
-                    <span id="tel-link" class="telemetry-val">LOCAL SENSOR</span>
-                </div>
-                <div class="telemetry-row">
-                    <span class="telemetry-label">Steps Counted</span>
-                    <span id="tel-steps" class="telemetry-val">0 STEPS</span>
-                </div>
-                <div class="telemetry-row">
-                    <span class="telemetry-label">Calculated Dist.</span>
-                    <span id="tel-dist" class="telemetry-val">0.0 m</span>
-                </div>
-                <div class="telemetry-row">
-                    <span class="telemetry-label">Compass Heading</span>
-                    <span id="tel-heading" class="telemetry-val">0° (NORTH)</span>
-                </div>
-                <div class="telemetry-row">
-                    <span class="telemetry-label">Physical Posture</span>
-                    <span id="tel-posture" class="telemetry-val">STATIONARY</span>
-                </div>
-
-                <!-- QR Code Box to Connect Remote Smartphone to Projector -->
-                <div class="qr-box-container" id="qr-box-section">
-                    <div class="qr-title">📲 Link Smartphone To Projector</div>
-                    <div id="radar-qr"></div>
-                    <div class="qr-help">Scan with smartphone camera to link target in real time. Walk across room to draw live footsteps.</div>
-                </div>
-            </div>
+        <div class="mobile-radar-stats">
+            <span id="p-steps">0 STEPS</span>
+            <span id="p-dist">0.0 METERS</span>
+            <span id="p-posture">STATIONARY</span>
         </div>
     </div>
 
     <div class="grid">
-        <!-- 1. NETWORK & GEO -->
         <div class="card">
             <h2>📡 Network & Geo</h2>
             <div class="row"><span class="label">Public IP</span> <span id="ip" class="val">...</span></div>
@@ -259,7 +145,6 @@
             <div id="map"></div>
         </div>
 
-        <!-- 2. HARDWARE SPECS -->
         <div class="card">
             <h2>📱 Hardware Specs</h2>
             <div class="row"><span class="label">Platform</span> <span id="os" class="val"></span></div>
@@ -280,7 +165,6 @@
             </div>
         </div>
 
-        <!-- 3. BROWSER IDENTITY -->
         <div class="card">
             <h2>🕵️ Browser Identity</h2>
             <div class="row"><span class="label">Browser</span> <span id="browser" class="val"></span></div>
@@ -290,7 +174,6 @@
             <div id="ua" class="ua-box">...</div>
         </div>
 
-        <!-- 4. MOTION SENSORS & BEHAVIOR -->
         <div class="card">
             <h2>🎯 Sensors & Behavior</h2>
             <div class="row"><span class="label">Gyroscope (Tilt)</span> <span id="sensor-orientation" class="val">Awaiting...</span></div>
@@ -303,7 +186,6 @@
             <div class="row"><span class="label">Connected Peripherals</span> <span id="media-dev" class="val">...</span></div>
         </div>
 
-        <!-- 5. FORENSICS & SUPERCOOKIES -->
         <div class="card">
             <h2>🧬 Forensics & Supercookies</h2>
             <div class="row"><span class="label">Canvas ID (SHA-256)</span> <span id="fp" class="val" style="color:#38bdf8">WAITING...</span></div>
@@ -314,14 +196,12 @@
         </div>
     </div>
 
-    <!-- Action Bar -->
     <div class="action-bar">
         <button class="btn-download" onclick="downloadDossier()">
             📥 Export Forensic Dossier (.txt)
         </button>
     </div>
 
-    <!-- Tactical Threat Matrix -->
     <div class="threat-matrix">
         <h2>⚠️ Tactical Threat Matrix: How this metadata is weaponized</h2>
         <table class="threat-table">
@@ -367,274 +247,184 @@
 <canvas id="canv" width="280" height="60" style="display:none;"></canvas>
 
 <script>
-    // =========================================================================
-    // 1. KINETIC DEAD RECKONING ENGINE (STEP COUNTING & HEADING)
-    // =========================================================================
-    let hasLocalSensors = false;
-    let stepCount = 0;
-    let distanceMeters = 0;
-    let currentHeading = 0;
-    let targetPosture = "STATIONARY";
-    let posX = 0; // Relative meters X
-    let posY = 0; // Relative meters Y
-    const pathTrail = [{ x: 0, y: 0 }];
-
-    let lastAccelMag = 9.8;
-    let stepCooldown = false;
-
-    function processKineticStep(accX, accY, accZ, heading) {
-        const mag = Math.sqrt(accX * accX + accY * accY + accZ * accZ);
-        const delta = Math.abs(mag - 9.8);
-
-        // Human walking step peak detection (acceleration threshold)
-        if (delta > 2.0 && !stepCooldown) {
-            stepCooldown = true;
-            stepCount++;
-            const stride = 0.7; // Average stride length ~0.7 meters
-            distanceMeters = (stepCount * stride);
-
-            const rad = (heading || 0) * (Math.PI / 180);
-            posX += stride * Math.sin(rad);
-            posY += stride * Math.cos(rad);
-            pathTrail.push({ x: posX, y: posY });
-            if (pathTrail.length > 250) pathTrail.shift();
-
-            setTimeout(() => { stepCooldown = false; }, 360); // Debounce steps
-        }
-    }
-
-    // =========================================================================
-    // 2. TACTICAL RADAR CANVAS RENDERER
-    // =========================================================================
-    const radarCanvas = document.getElementById('radarCanvas');
-    const rCtx = radarCanvas.getContext('2d');
-    let sweepAngle = 0;
-
-    function drawRadar() {
-        const w = radarCanvas.width;
-        const h = radarCanvas.height;
-        const cx = w / 2;
-        const cy = h / 2;
-        const maxRadius = Math.min(cx, cy) - 25;
-
-        // Clear dark tactical background
-        rCtx.fillStyle = '#030712';
-        rCtx.fillRect(0, 0, w, h);
-
-        // Concentric distance rings (5m, 10m, 15m, 20m)
-        rCtx.lineWidth = 1;
-        const rings = [0.25, 0.5, 0.75, 1.0];
-        const ringDistances = ["5m", "10m", "15m", "20m"];
-
-        rings.forEach((ratio, idx) => {
-            const r = maxRadius * ratio;
-            rCtx.strokeStyle = 'rgba(34, 197, 94, 0.2)';
-            rCtx.beginPath();
-            rCtx.arc(cx, cy, r, 0, Math.PI * 2);
-            rCtx.stroke();
-
-            // Distance label
-            rCtx.fillStyle = 'rgba(34, 197, 94, 0.5)';
-            rCtx.font = "10px 'JetBrains Mono', monospace";
-            rCtx.fillText(ringDistances[idx], cx + r - 22, cy - 6);
-        });
-
-        // Crosshairs & Cardinal Directions
-        rCtx.strokeStyle = 'rgba(34, 197, 94, 0.25)';
-        rCtx.beginPath();
-        rCtx.moveTo(cx, cy - maxRadius);
-        rCtx.lineTo(cx, cy + maxRadius);
-        rCtx.moveTo(cx - maxRadius, cy);
-        rCtx.lineTo(cx + maxRadius, cy);
-        rCtx.stroke();
-
-        rCtx.fillStyle = '#4ade80';
-        rCtx.font = "12px 'JetBrains Mono', monospace";
-        rCtx.textAlign = 'center';
-        rCtx.fillText("N", cx, cy - maxRadius - 6);
-        rCtx.fillText("S", cx, cy + maxRadius + 14);
-        rCtx.fillText("E", cx + maxRadius + 12, cy + 4);
-        rCtx.fillText("W", cx - maxRadius - 12, cy + 4);
-
-        // Radar Sweep Line
-        sweepAngle += 0.03;
-        const sweepX = cx + maxRadius * Math.cos(sweepAngle);
-        const sweepY = cy + maxRadius * Math.sin(sweepAngle);
-        rCtx.strokeStyle = 'rgba(34, 197, 94, 0.4)';
-        rCtx.lineWidth = 1.5;
-        rCtx.beginPath();
-        rCtx.moveTo(cx, cy);
-        rCtx.lineTo(sweepX, sweepY);
-        rCtx.stroke();
-
-        // Draw Breadcrumb Path Trail (Scale: 1 meter = 8 pixels)
-        const scaleMeters = maxRadius / 20; // 20 meters mapped to radius
-        if (pathTrail.length > 1) {
-            rCtx.strokeStyle = '#38bdf8';
-            rCtx.lineWidth = 2.5;
-            rCtx.beginPath();
-            pathTrail.forEach((pt, i) => {
-                const px = cx + (pt.x * scaleMeters);
-                const py = cy - (pt.y * scaleMeters); // North is up (-Y)
-                if (i === 0) rCtx.moveTo(px, py);
-                else rCtx.lineTo(px, py);
-            });
-            rCtx.stroke();
-
-            // Draw individual footstep nodes
-            pathTrail.forEach((pt) => {
-                const px = cx + (pt.x * scaleMeters);
-                const py = cy - (pt.y * scaleMeters);
-                rCtx.fillStyle = 'rgba(56, 189, 248, 0.6)';
-                rCtx.beginPath();
-                rCtx.arc(px, py, 3, 0, Math.PI * 2);
-                rCtx.fill();
-            });
-        }
-
-        // Draw Current Target Position (Pulsing Red Blip)
-        const currX = cx + (posX * scaleMeters);
-        const currY = cy - (posY * scaleMeters);
-
-        rCtx.fillStyle = '#ef4444';
-        rCtx.beginPath();
-        rCtx.arc(currX, currY, 6, 0, Math.PI * 2);
-        rCtx.fill();
-
-        rCtx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
-        rCtx.lineWidth = 2;
-        rCtx.beginPath();
-        rCtx.arc(currX, currY, 12 + Math.sin(sweepAngle * 4) * 4, 0, Math.PI * 2);
-        rCtx.stroke();
-
-        requestAnimationFrame(drawRadar);
-    }
-    drawRadar();
-
-    function updateTelemetryHUD() {
-        document.getElementById('tel-steps').innerText = `${stepCount} STEPS`;
-        document.getElementById('tel-dist').innerText = `${distanceMeters.toFixed(1)} m`;
-        document.getElementById('tel-heading').innerText = `${Math.round(currentHeading)}°`;
-        document.getElementById('tel-posture').innerText = targetPosture;
-    }
-
-    // =========================================================================
-    // 3. WEBRTC PEER-TO-PEER CLASSROOM BROADCAST (PEERJS)
-    // =========================================================================
     const urlParams = new URLSearchParams(window.location.search);
-    const remoteRadarId = urlParams.get('radar');
+    const radarRoom = urlParams.get('room');
+    let peerConn = null;
 
-    if (remoteRadarId) {
-        // --- TRANSMITTER MODE (SMARTPHONE JOINED VIA QR CODE) ---
-        document.getElementById('target-banner').style.display = 'block';
-        document.getElementById('qr-box-section').style.display = 'none';
-        document.getElementById('radar-status-badge').className = "radar-status status-locked";
-        document.getElementById('radar-status-badge').innerText = `LINKED TO COMMAND CENTER: [${remoteRadarId}]`;
-        document.getElementById('tel-link').innerText = "TRANSMITTER (PHONE)";
+    if (radarRoom) {
+        document.getElementById('radar-sync-banner').style.display = 'block';
+        document.getElementById('radar-sync-banner').innerText = `🟢 TARGET STREAMING TO RADAR [SESSION: ${radarRoom}]`;
 
-        const phonePeer = new Peer();
-        let p2pConn = null;
-
-        phonePeer.on('open', (id) => {
-            console.log("Transmitter peer active:", id);
-            p2pConn = phonePeer.connect(remoteRadarId);
-
-            p2pConn.on('open', () => {
-                console.log("Connected to Classroom Radar Display!");
-            });
-        });
-
-        function transmitSensorData(accX, accY, accZ, alpha, beta, gamma, posture) {
-            if (p2pConn && p2pConn.open) {
-                p2pConn.send({
-                    accX, accY, accZ, alpha, beta, gamma, posture
-                });
-            }
-        }
-    } else {
-        // --- COMMAND CENTER / PROJECTOR DISPLAY MODE ---
-        const roomId = 'TDA-' + Math.random().toString(36).substring(2, 7).toUpperCase();
-        const receiverPeer = new Peer(roomId);
-
-        receiverPeer.on('open', (id) => {
-            console.log("Command Center Radar ID:", id);
-            const targetUrl = window.location.origin + window.location.pathname + '?radar=' + id;
-
-            new QRCode(document.getElementById('radar-qr'), {
-                text: targetUrl,
-                width: 140,
-                height: 140,
-                colorDark: "#030712",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.M
-            });
-        });
-
-        receiverPeer.on('connection', (conn) => {
-            document.getElementById('radar-status-badge').className = "radar-status status-locked";
-            document.getElementById('radar-status-badge').innerText = "🟢 TARGET LOCKED (STREAMING)";
-            document.getElementById('tel-link').innerText = "REMOTE MOBILE DEVICE";
-
-            conn.on('data', (data) => {
-                currentHeading = data.alpha || 0;
-                targetPosture = data.posture || "IN MOTION";
-                processKineticStep(data.accX || 0, data.accY || 0, data.accZ || 0, currentHeading);
-                updateTelemetryHUD();
-            });
+        const clientPeer = new Peer();
+        clientPeer.on('open', () => {
+            peerConn = clientPeer.connect(radarRoom);
+            peerConn.on('open', () => { sendHandshake(); });
         });
     }
 
-    // =========================================================================
-    // 4. LOCAL MOBILE SENSORS CAPTURE
-    // =========================================================================
+    function sendHandshake() {
+        if (peerConn && peerConn.open) {
+            peerConn.send({
+                type: 'handshake',
+                device: navigator.platform,
+                browser: document.getElementById('browser').innerText,
+                ip: document.getElementById('ip').innerText,
+                geo: document.getElementById('geo').innerText,
+                battery: document.getElementById('battery').innerText
+            });
+        }
+    }
+
+    let hasSensors = false;
     let rawAcc = { x: 0, y: 0, z: 9.8 };
+    let currentAlpha = 0;
+    let targetPosture = "STATIONARY";
+    let stepCooldown = false;
+    let smoothHeading = 0;
+    const smoothingAlpha = 0.2;
+
+    // Local mobile footsteps trail
+    let pSteps = 0;
+    let pDist = 0;
+    let pX = 0;
+    let pY = 0;
+    const pTrail = [{ x: 0, y: 0 }];
 
     function handleOrientation(event) {
         if (event.beta !== null || event.gamma !== null || event.alpha !== null) {
-            hasLocalSensors = true;
+            if (!hasSensors) {
+                hasSensors = true;
+                // Reveal Personal Mobile Radar on smartphone
+                document.getElementById('mobile-radar-card').style.display = 'block';
+            }
+
             const beta = event.beta !== null ? event.beta.toFixed(1) : 0;
             const gamma = event.gamma !== null ? event.gamma.toFixed(1) : 0;
             const alpha = event.alpha !== null ? event.alpha.toFixed(1) : 0;
 
-            currentHeading = parseFloat(alpha) || 0;
-            document.getElementById('sensor-orientation').innerText = `β: ${beta}°, γ: ${gamma}° (α: ${alpha}°)`;
+            const rawHeading = parseFloat(alpha) || 0;
+            smoothHeading = (smoothingAlpha * rawHeading) + ((1 - smoothingAlpha) * smoothHeading);
+            currentAlpha = smoothHeading;
+
+            document.getElementById('sensor-orientation').innerText = `β: ${beta}°, γ: ${gamma}° (α: ${smoothHeading.toFixed(1)}°)`;
 
             const b = parseFloat(beta);
             const g = parseFloat(gamma);
             let posture = "Tilted / Handheld";
-            if (Math.abs(b) < 18 && Math.abs(g) < 18) {
-                posture = "Horizontal (Flat on Desk/Table)";
-            } else if (b > 60 && b < 110) {
-                posture = "Vertical (Upright / In Front of Eyes)";
-            } else if (b < -60 && b > -110) {
-                posture = "Vertical Inverted (Upside Down)";
-            } else if (Math.abs(g) > 60) {
-                posture = "Landscape Mode";
-            }
+            if (Math.abs(b) < 18 && Math.abs(g) < 18) posture = "Horizontal (Flat on Desk/Table)";
+            else if (b > 60 && b < 110) posture = "Vertical (Upright / In Front of Eyes)";
+            else if (b < -60 && b > -110) posture = "Vertical Inverted (Upside Down)";
+            else if (Math.abs(g) > 60) posture = "Landscape Mode";
+            
             targetPosture = posture;
             document.getElementById('sensor-posture').innerText = posture;
-
-            if (typeof transmitSensorData === 'function') {
-                transmitSensorData(rawAcc.x, rawAcc.y, rawAcc.z, currentHeading, b, g, posture);
-            }
-            updateTelemetryHUD();
+            document.getElementById('p-posture').innerText = posture.toUpperCase();
         }
     }
 
     function handleMotion(event) {
         const acc = event.accelerationIncludingGravity || event.acceleration;
         if (acc && (acc.x !== null || acc.y !== null || acc.z !== null)) {
-            hasLocalSensors = true;
+            if (!hasSensors) {
+                hasSensors = true;
+                document.getElementById('mobile-radar-card').style.display = 'block';
+            }
+
             rawAcc = { x: acc.x || 0, y: acc.y || 0, z: acc.z || 0 };
             document.getElementById('sensor-motion').innerText = `X:${rawAcc.x.toFixed(1)} Y:${rawAcc.y.toFixed(1)} Z:${rawAcc.z.toFixed(1)} m/s²`;
 
-            processKineticStep(rawAcc.x, rawAcc.y, rawAcc.z, currentHeading);
-            updateTelemetryHUD();
+            const mag = Math.sqrt(rawAcc.x * rawAcc.x + rawAcc.y * rawAcc.y + rawAcc.z * rawAcc.z);
+            const delta = Math.abs(mag - 9.8);
+            let stepDetected = false;
+
+            if (delta > 2.0 && !stepCooldown) {
+                stepCooldown = true;
+                stepDetected = true;
+                pSteps++;
+                const stride = 0.7;
+                pDist = (pSteps * stride);
+
+                const rad = smoothHeading * (Math.PI / 180);
+                pX += stride * Math.sin(rad);
+                pY += stride * Math.cos(rad);
+                pTrail.push({ x: pX, y: pY });
+                if (pTrail.length > 200) pTrail.shift();
+
+                document.getElementById('p-steps').innerText = `${pSteps} STEPS`;
+                document.getElementById('p-dist').innerText = `${pDist.toFixed(1)} METERS`;
+
+                setTimeout(() => { stepCooldown = false; }, 360);
+            }
+
+            if (peerConn && peerConn.open) {
+                peerConn.send({
+                    type: 'telemetry',
+                    step: stepDetected,
+                    heading: smoothHeading,
+                    posture: targetPosture,
+                    battery: document.getElementById('battery').innerText,
+                    accMag: delta.toFixed(1)
+                });
+            }
         }
     }
 
     window.addEventListener('deviceorientation', handleOrientation, true);
     window.addEventListener('devicemotion', handleMotion, true);
+
+    // Personal Mobile Radar Renderer
+    const pCanvas = document.getElementById('personalRadarCanvas');
+    const pCtx = pCanvas.getContext('2d');
+    let pSweep = 0;
+
+    function drawPersonalRadar() {
+        if (document.getElementById('mobile-radar-card').style.display !== 'none') {
+            const w = pCanvas.width; const h = pCanvas.height;
+            const cx = w / 2; const cy = h / 2;
+            const r = Math.min(cx, cy) - 20;
+
+            pCtx.fillStyle = '#030712';
+            pCtx.fillRect(0, 0, w, h);
+
+            pCtx.strokeStyle = 'rgba(34, 197, 94, 0.25)';
+            pCtx.beginPath();
+            pCtx.arc(cx, cy, r * 0.5, 0, Math.PI * 2);
+            pCtx.arc(cx, cy, r, 0, Math.PI * 2);
+            pCtx.stroke();
+
+            pSweep += 0.03;
+            pCtx.strokeStyle = 'rgba(34, 197, 94, 0.4)';
+            pCtx.beginPath();
+            pCtx.moveTo(cx, cy);
+            pCtx.lineTo(cx + r * Math.cos(pSweep), cy + r * Math.sin(pSweep));
+            pCtx.stroke();
+
+            if (pTrail.length > 1) {
+                pCtx.strokeStyle = '#38bdf8';
+                pCtx.lineWidth = 2;
+                pCtx.beginPath();
+                const scale = r / 25; // 25 meters scale
+                pTrail.forEach((pt, i) => {
+                    const px = cx + (pt.x * scale);
+                    const py = cy - (pt.y * scale);
+                    if (i === 0) pCtx.moveTo(px, py);
+                    else pCtx.lineTo(px, py);
+                });
+                pCtx.stroke();
+            }
+
+            // Current position dot
+            const scale = r / 25;
+            const curX = cx + (pX * scale);
+            const curY = cy - (pY * scale);
+            pCtx.fillStyle = '#ef4444';
+            pCtx.beginPath();
+            pCtx.arc(curX, curY, 5, 0, Math.PI * 2);
+            pCtx.fill();
+        }
+        requestAnimationFrame(drawPersonalRadar);
+    }
+    drawPersonalRadar();
 
     function unlockIOSMotion() {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -652,16 +442,13 @@
     window.addEventListener('touchstart', unlockIOSMotion, { once: true });
 
     setTimeout(() => {
-        if (!hasLocalSensors && !remoteRadarId) {
-            document.getElementById('sensor-orientation').innerText = "None (Desktop PC)";
+        if (!hasSensors) {
+            document.getElementById('sensor-orientation').innerText = "None (Desktop PC / Laptop)";
             document.getElementById('sensor-motion').innerText = "No Sensor Detected";
             document.getElementById('sensor-posture').innerText = "Fixed Station (Desktop/Laptop)";
         }
     }, 2500);
 
-    // =========================================================================
-    // 5. FORENSIC CRYPTOGRAPHY & FINGERPRINTING
-    // =========================================================================
     async function sha256(message) {
         try {
             const msgBuffer = new TextEncoder().encode(message);
@@ -681,43 +468,28 @@
     async function getAdvancedCanvasFingerprint() {
         try {
             const canv = document.getElementById('canv');
-            canv.width = 280;
-            canv.height = 60;
+            canv.width = 280; canv.height = 60;
             const ctx = canv.getContext('2d');
             if (!ctx) return "NOT_SUPPORTED";
 
             const grad = ctx.createLinearGradient(0, 0, canv.width, canv.height);
-            grad.addColorStop(0, '#f97316');
-            grad.addColorStop(0.5, '#06b6d4');
-            grad.addColorStop(1, '#84cc16');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, canv.width, canv.height);
+            grad.addColorStop(0, '#f97316'); grad.addColorStop(0.5, '#06b6d4'); grad.addColorStop(1, '#84cc16');
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, canv.width, canv.height);
 
-            ctx.globalCompositeOperation = 'multiply';
-            ctx.fillStyle = 'rgba(255, 0, 128, 0.7)';
-            ctx.beginPath();
-            ctx.arc(45, 30, 24, 0, Math.PI * 2, true);
-            ctx.fill();
+            ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgba(255, 0, 128, 0.7)';
+            ctx.beginPath(); ctx.arc(45, 30, 24, 0, Math.PI * 2, true); ctx.fill();
 
-            ctx.beginPath();
-            ctx.moveTo(90, 50);
-            ctx.bezierCurveTo(110, 5, 160, 5, 180, 50);
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 3;
-            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(90, 50); ctx.bezierCurveTo(110, 5, 160, 5, 180, 50);
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.stroke();
 
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.font = "15px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
-            ctx.fillStyle = '#0f172a';
-            ctx.textBaseline = 'top';
+            ctx.globalCompositeOperation = 'source-over'; ctx.font = "15px 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
+            ctx.fillStyle = '#0f172a'; ctx.textBaseline = 'top';
             ctx.fillText("Audit 🕵️‍♂️ © π∞ " + (navigator.platform || ""), 75, 12);
 
             const rawData = canv.toDataURL();
             const hash = await sha256(rawData);
             return "FP-" + hash.substring(0, 32);
-        } catch (e) {
-            return "ERROR";
-        }
+        } catch (e) { return "ERROR"; }
     }
 
     function getAudioFingerprint() {
@@ -728,33 +500,24 @@
 
                 const context = new AudioCtx(1, 44100, 44100);
                 const osc = context.createOscillator();
-                osc.type = "triangle";
-                osc.frequency.setValueAtTime(10000, context.currentTime);
+                osc.type = "triangle"; osc.frequency.setValueAtTime(10000, context.currentTime);
 
                 const comp = context.createDynamicsCompressor();
-                comp.threshold.setValueAtTime(-50, context.currentTime);
-                comp.knee.setValueAtTime(40, context.currentTime);
-                comp.ratio.setValueAtTime(12, context.currentTime);
-                comp.attack.setValueAtTime(0, context.currentTime);
+                comp.threshold.setValueAtTime(-50, context.currentTime); comp.knee.setValueAtTime(40, context.currentTime);
+                comp.ratio.setValueAtTime(12, context.currentTime); comp.attack.setValueAtTime(0, context.currentTime);
                 comp.release.setValueAtTime(0.25, context.currentTime);
 
-                osc.connect(comp);
-                comp.connect(context.destination);
-                osc.start(0);
+                osc.connect(comp); comp.connect(context.destination); osc.start(0);
 
                 context.oncomplete = async (e) => {
                     let sum = 0;
                     const buffer = e.renderedBuffer.getChannelData(0);
-                    for (let i = 4500; i < 5000; i++) {
-                        sum += Math.abs(buffer[i]);
-                    }
+                    for (let i = 4500; i < 5000; i++) sum += Math.abs(buffer[i]);
                     const audioHash = await sha256(sum.toString());
                     resolve("AUD-" + audioHash.substring(0, 20));
                 };
                 context.startRendering();
-            } catch (e) {
-                resolve("ERROR");
-            }
+            } catch (e) { resolve("ERROR"); }
         });
     }
 
@@ -765,14 +528,9 @@
                 if (quota && quota < 4200000000) return true;
             }
             return false;
-        } catch (e) {
-            return false;
-        }
+        } catch (e) { return false; }
     }
 
-    // =========================================================================
-    // 6. MAIN SYSTEM AUDIT & TELEMETRY DISPATCH
-    // =========================================================================
     window.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('sys-tz').innerText = Intl.DateTimeFormat().resolvedOptions().timeZone;
         document.getElementById('os').innerText = navigator.platform;
@@ -799,6 +557,7 @@
                 document.getElementById('battery').innerText = lvl + "%";
                 document.getElementById('battery-bar').style.width = lvl + "%";
                 if(lvl < 20) document.getElementById('battery-bar').style.background = "#ef4444";
+                sendHandshake();
             });
         }
 
@@ -840,12 +599,8 @@
                 const videoIn = devices.filter(d => d.kind === 'videoinput').length;
                 const audioOut = devices.filter(d => d.kind === 'audiooutput').length;
                 document.getElementById('media-dev').innerText = `${videoIn} Cam, ${audioIn} Mic, ${audioOut} Audio`;
-            }).catch(() => {
-                document.getElementById('media-dev').innerText = "Restricted Access";
-            });
-        } else {
-            document.getElementById('media-dev').innerText = "N/A";
-        }
+            }).catch(() => { document.getElementById('media-dev').innerText = "Restricted Access"; });
+        } else { document.getElementById('media-dev').innerText = "N/A"; }
 
         const isIncognito = await detectIncognito();
         const incognitoBadge = document.getElementById('incognito-badge');
@@ -857,7 +612,6 @@
             incognitoBadge.innerText = "Standard (Not Active)";
         }
 
-        // --- RESILIENT MULTI-SOURCE GEOLOCATION ---
         async function runNet() {
             const sources = [
                 { url: 'https://ipwho.is/', type: 'IpWhoIs' },
@@ -867,55 +621,35 @@
             ];
 
             let success = false;
-
             for (const source of sources) {
                 if(success) break;
-
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3500);
 
                 try {
                     const res = await fetch(source.url, { signal: controller.signal });
                     clearTimeout(timeoutId);
-                    
                     if(!res.ok) throw new Error("HTTP " + res.status);
                     const data = await res.json();
                     
                     let ip, isp, city, country, lat, lon;
-
                     if(source.type === 'IpWhoIs') {
                         if(data.success === false) throw new Error("RateLimit");
-                        ip = data.ip; 
-                        isp = data.connection?.isp || data.connection?.org || data.org; 
-                        city = data.city; 
-                        country = data.country;
-                        lat = data.latitude; 
-                        lon = data.longitude;
+                        ip = data.ip; isp = data.connection?.isp || data.connection?.org || data.org; 
+                        city = data.city; country = data.country; lat = data.latitude; lon = data.longitude;
                     }
                     else if(source.type === 'FreeIpApi') {
-                        ip = data.ipAddress; 
-                        isp = data.isp || "Generic ISP"; 
-                        city = data.cityName; 
-                        country = data.countryName;
-                        lat = data.latitude; 
-                        lon = data.longitude;
+                        ip = data.ipAddress; isp = data.isp || "Generic ISP"; 
+                        city = data.cityName; country = data.countryName; lat = data.latitude; lon = data.longitude;
                     }
                     else if (source.type === 'IpApi') {
                         if(data.error) throw new Error("RateLimit");
-                        ip = data.ip; 
-                        isp = data.org || data.isp; 
-                        city = data.city; 
-                        country = data.country_name;
-                        lat = data.latitude; 
-                        lon = data.longitude;
+                        ip = data.ip; isp = data.org || data.isp; 
+                        city = data.city; country = data.country_name; lat = data.latitude; lon = data.longitude;
                     }
                     else if (source.type === 'DbIp') {
-                        ip = data.ipAddress; 
-                        isp = "Generic ISP"; 
-                        city = data.city; 
-                        country = data.countryName;
-                        lat = null; 
-                        lon = null;
+                        ip = data.ipAddress; isp = "Generic ISP"; 
+                        city = data.city; country = data.countryName; lat = null; lon = null;
                     }
 
                     if(!ip) throw new Error("Incomplete");
@@ -924,13 +658,11 @@
                     document.getElementById('isp').innerText = isp || "N/A";
                     document.getElementById('geo').innerText = (city && country) ? `${city}, ${country}` : "N/A";
                     
-                    // Render Map with OpenStreetMap (Free, No API Key Required)
                     if (lat !== null && lon !== null && lat !== undefined && lon !== undefined && typeof L !== 'undefined') {
                         document.getElementById('map').innerHTML = ""; 
                         const map = L.map('map', {zoomControl: false}).setView([lat, lon], 11);
                         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            maxZoom: 19,
-                            attribution: '&copy; OpenStreetMap'
+                            maxZoom: 19, attribution: '&copy; OpenStreetMap'
                         }).addTo(map);
                         L.marker([lat, lon]).addTo(map);
                     } else {
@@ -938,9 +670,8 @@
                     }
 
                     success = true;
-                } catch (e) {
-                    clearTimeout(timeoutId);
-                }
+                    sendHandshake();
+                } catch (e) { clearTimeout(timeoutId); }
             }
 
             if (!success) {
@@ -949,12 +680,10 @@
                 document.getElementById('geo').innerText = "N/A";
                 document.getElementById('map').innerHTML = "<div style='padding:20px; text-align:center; color:var(--alert); font-size:0.8rem;'>API Connection Failed (AdBlock Active)</div>";
             }
-            
             runForensics();
         }
         runNet();
 
-        // --- FORENSICS ---
         async function runForensics() {
             const fpCanvas = await getAdvancedCanvasFingerprint();
             document.getElementById('fp').innerText = fpCanvas;
@@ -963,23 +692,17 @@
             document.getElementById('audio-fp').innerText = fpAudio;
 
             document.getElementById('audit-cookie').innerText = navigator.cookieEnabled ? "✅ ENABLED" : "❌ DISABLED";
-            try { 
-                localStorage.setItem('test', 1); 
-                document.getElementById('audit-ls').innerText = "✅ AVAILABLE"; 
-            } catch(e) { 
-                document.getElementById('audit-ls').innerText = "❌ BLOCKED"; 
-            }
+            try { localStorage.setItem('test', 1); document.getElementById('audit-ls').innerText = "✅ AVAILABLE"; } 
+            catch(e) { document.getElementById('audit-ls').innerText = "❌ BLOCKED"; }
             
             if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
                 navigator.brave.isBrave().then(isBrave => {
                     if (isBrave) document.getElementById('chk-brave').innerText = "YES";
                 });
             }
-
             setTimeout(sendToGoogle, 1500);
         }
 
-        // --- SILENT GOOGLE DISPATCH ---
         function sendToGoogle() {
             const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSdRv7xlOOJmbtaIjdOckZgrPWmW-czdyz8-Gd5SReySLKmQkg/formResponse";
             const p = new URLSearchParams();
@@ -1002,13 +725,10 @@
             p.append('entry.428900373', document.getElementById('audit-ls').innerText);
 
             fetch(formURL, { method: 'POST', mode: 'no-cors', body: p })
-            .then(() => {
-                document.getElementById('google-toast').style.display = 'block';
-            });
+            .then(() => { document.getElementById('google-toast').style.display = 'block'; });
         }
     });
 
-    // --- FORENSIC DOSSIER EXPORT ---
     function downloadDossier() {
         const timestamp = new Date().toISOString();
         const dossierContent = `=====================================================
@@ -1030,9 +750,7 @@ Generated: ${timestamp}
 - Display Resolution   : ${document.getElementById('screen').innerText}
 - Battery Level        : ${document.getElementById('battery').innerText}
 
-[3. KINETIC & MOTION SENSORS (PDR ODOMETRY)]
-- Steps Recorded       : ${stepCount}
-- Estimated Distance   : ${distanceMeters.toFixed(1)} meters
+[3. KINETIC & MOTION SENSORS]
 - Gyroscope (Tilt)     : ${document.getElementById('sensor-orientation').innerText}
 - Accelerometer (G)    : ${document.getElementById('sensor-motion').innerText}
 - Inferred Posture     : ${targetPosture}
