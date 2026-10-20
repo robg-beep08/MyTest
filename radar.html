@@ -101,18 +101,11 @@
         .qr-card p { font-size: 0.75rem; color: var(--text-muted); margin: 0 0 14px 0; }
         #qr-container { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         
-        .url-box-container {
-            width: 100%; margin-top: 14px;
-        }
+        .url-box-container { width: 100%; margin-top: 14px; }
         .url-input {
-            width: 95%; background: #030712; color: #38bdf8; border: 1px solid #1e293b;
+            width: 100%; background: #030712; color: #38bdf8; border: 1px solid #1e293b;
             padding: 8px 10px; border-radius: 6px; font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem; box-sizing: border-box; text-align: center;
-        }
-        .url-notice {
-            margin-top: 8px; font-size: 0.7rem; color: #f59e0b; line-height: 1.3;
-            background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);
-            padding: 8px 10px; border-radius: 6px; text-align: left;
+            font-size: 0.72rem; box-sizing: border-box; text-align: center;
         }
 
         /* Target Table */
@@ -160,7 +153,7 @@
         </div>
         <div class="session-badge" id="session-display">
             <span class="pulse-dot" style="background:#4ade80;"></span>
-            <span id="session-id-text">INITIALIZING SESSION...</span>
+            <span id="session-id-text">SESSION: TACTICAL-RADAR</span>
         </div>
     </header>
 
@@ -197,20 +190,16 @@
 
                 <div class="url-box-container">
                     <input type="text" id="target-url-input" class="url-input" readonly />
-                    <div id="localhost-notice" class="url-notice" style="display:none;">
-                        ⚡ <strong>Localhost Detected:</strong> Smartphones cannot scan "localhost". The QR code automatically targets your live GitHub Pages site so any phone can connect instantly.
-                    </div>
                 </div>
             </div>
 
             <div class="qr-card" style="text-align: left; align-items: flex-start;">
                 <h3 style="color:#4ade80;">💡 Live Instructor Guide</h3>
-                <p style="margin-bottom:8px; line-height: 1.4;">
-                    1. Project this page on the classroom screen.<br>
-                    2. Invite students to scan the QR code with their smartphones.<br>
-                    3. Each phone connects instantly without installing any app.<br>
-                    4. When students rotate their phone, their directional compass arrow spins on the radar in real time.<br>
-                    5. As they walk, distinct colored footstep trails appear on the radar and street map below.
+                <p style="margin-bottom:8px; line-height: 1.5; font-size: 0.8rem; color: #cbd5e1;">
+                    1. <strong>Slide Integration:</strong> Both the QR in your slides and this page connect to the same central session.<br>
+                    2. <strong>Smartphone Display:</strong> When students open the page, they see their own live radar on their phone.<br>
+                    3. <strong>Sensor Activation:</strong> Students tap the green button on their screen to unlock motion sensors.<br>
+                    4. <strong>Live Fleets:</strong> When students turn or walk, their colored arrows and footsteps update here in real time.
                 </p>
             </div>
         </div>
@@ -270,12 +259,12 @@
 
     const targets = {}; 
     let targetCounter = 0;
-    let manualRange = 'auto'; // 'auto' or numeric meters
+    let manualRange = 'auto';
 
     // =========================================================================
     // 2. LEAFLET SIMULATED GPS MAP (OPENSTREETMAP)
     // =========================================================================
-    const defaultCenter = [41.9028, 12.4964]; // Default Rome, adjusted by incoming IP
+    const defaultCenter = [41.9028, 12.4964]; // Default Rome
     const map = L.map('gpsMap', { zoomControl: true }).setView(defaultCenter, 15);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -285,25 +274,17 @@
     let mapCentered = false;
 
     // =========================================================================
-    // 3. WEBRTC COMMAND CENTER HUB (PEERJS) & SMART QR LINK
+    // 3. UNIFIED WEBRTC COMMAND CENTER HUB (PEERJS)
     // =========================================================================
-    const roomId = 'RADAR-' + Math.random().toString(36).substring(2, 7).toUpperCase();
+    // Shared fixed room ID ensures slides QR code and radar match seamlessly!
+    const DEFAULT_ROOM = 'TACTICAL-RADAR';
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room') || DEFAULT_ROOM;
+
     document.getElementById('session-id-text').innerText = `SESSION: ${roomId}`;
 
-    // Smart QR target detection:
-    // If running on localhost or file://, external phones cannot reach 'localhost'.
-    // In that case, default QR points to the GitHub Pages production deployment.
-    const isLocal = window.location.hostname === 'localhost' || 
-                    window.location.hostname === '127.0.0.1' || 
-                    window.location.protocol === 'file:';
-
-    let targetBaseUrl = window.location.href.replace('radar.html', 'index.html').split('?')[0];
-    if (isLocal) {
-        targetBaseUrl = 'https://robg-beep08.github.io/MyTest/index.html';
-        document.getElementById('localhost-notice').style.display = 'block';
-    }
-
-    const targetUrl = targetBaseUrl + '?room=' + roomId;
+    // Target URL points to GitHub Pages index.html
+    const targetUrl = 'https://robg-beep08.github.io/MyTest/index.html' + (roomId !== DEFAULT_ROOM ? ('?room=' + roomId) : '');
     document.getElementById('target-url-input').value = targetUrl;
 
     new QRCode(document.getElementById('qr-container'), {
@@ -315,105 +296,118 @@
         correctLevel: QRCode.CorrectLevel.M
     });
 
-    const peer = new Peer(roomId);
+    let peer = null;
 
-    peer.on('open', (id) => {
-        console.log("Radar Command Center active with ID:", id);
-    });
+    function initRadarPeer() {
+        try {
+            peer = new Peer(roomId);
 
-    peer.on('connection', (conn) => {
-        targetCounter++;
-        const targetNum = targetCounter;
-        const colorObj = TARGET_COLORS[(targetNum - 1) % TARGET_COLORS.length];
+            peer.on('open', (id) => {
+                console.log("Radar Command Center active on room:", id);
+                document.getElementById('session-display').style.background = "#022c22";
+            });
 
-        const targetData = {
-            id: targetNum,
-            color: colorObj.hex,
-            colorName: colorObj.label,
-            device: 'Mobile Target',
-            browser: 'Browser',
-            ip: 'Detecting...',
-            geo: 'Detecting...',
-            battery: 'N/A',
-            steps: 0,
-            distance: 0.0,
-            heading: 0,
-            posture: 'CONNECTED',
-            path: [{ x: 0, y: 0 }],
-            lat: null,
-            lon: null,
-            mapPolyline: null,
-            mapMarker: null,
-            lastSeen: Date.now()
-        };
+            peer.on('connection', (conn) => {
+                targetCounter++;
+                const targetNum = targetCounter;
+                const colorObj = TARGET_COLORS[(targetNum - 1) % TARGET_COLORS.length];
 
-        targets[conn.peer] = targetData;
-        updateTargetTable();
+                const targetData = {
+                    id: targetNum,
+                    color: colorObj.hex,
+                    colorName: colorObj.label,
+                    device: 'Mobile Target',
+                    browser: 'Browser',
+                    ip: 'Detecting...',
+                    geo: 'Detecting...',
+                    battery: 'N/A',
+                    steps: 0,
+                    distance: 0.0,
+                    heading: 0,
+                    posture: 'CONNECTED',
+                    path: [{ x: 0, y: 0 }],
+                    lat: null,
+                    lon: null,
+                    mapPolyline: null,
+                    mapMarker: null,
+                    lastSeen: Date.now()
+                };
 
-        conn.on('data', (data) => {
-            const t = targets[conn.peer];
-            if (!t) return;
-
-            t.lastSeen = Date.now();
-
-            if (data.device) t.device = data.device;
-            if (data.browser) t.browser = data.browser;
-            if (data.ip && data.ip !== '...') t.ip = data.ip;
-            if (data.geo && data.geo !== '...') t.geo = data.geo;
-            if (data.battery && data.battery !== 'N/A') t.battery = data.battery;
-            if (data.heading !== undefined) t.heading = data.heading;
-            if (data.posture) t.posture = data.posture;
-
-            // Geolocation initialization for street map
-            if (data.lat && data.lon) {
-                if (!t.lat || !t.lon) {
-                    t.lat = data.lat;
-                    t.lon = data.lon;
-                    if (!mapCentered) {
-                        mapCentered = true;
-                        map.setView([t.lat, t.lon], 16);
-                    }
-                    initMapMarker(t);
-                }
-            }
-
-            // Step registered (either single step flag or cumulative count)
-            if (data.step) {
-                const stepCountTarget = (data.stepCount !== undefined && data.stepCount > t.steps) 
-                    ? data.stepCount 
-                    : (t.steps + 1);
-
-                const stepsToAdd = stepCountTarget - t.steps;
-                for (let i = 0; i < stepsToAdd; i++) {
-                    t.steps++;
-                    const stride = 0.72; // ~0.72m per step
-                    t.distance = parseFloat((t.steps * stride).toFixed(1));
-
-                    const rad = (t.heading || 0) * (Math.PI / 180);
-                    const lastPt = t.path[t.path.length - 1] || { x: 0, y: 0 };
-                    const nextX = lastPt.x + (stride * Math.sin(rad));
-                    const nextY = lastPt.y + (stride * Math.cos(rad));
-                    t.path.push({ x: nextX, y: nextY });
-
-                    if (t.path.length > 800) t.path.shift();
-
-                    // Advance simulated real street map
-                    updateSimulatedGpsMap(t, stride, t.heading);
-                }
-            }
-
-            updateTargetTable();
-        });
-
-        conn.on('close', () => {
-            if (targets[conn.peer]) {
-                targets[conn.peer].posture = 'DISCONNECTED';
+                targets[conn.peer] = targetData;
                 updateTargetTable();
-            }
-        });
-    });
 
-    // Initialize map marker for newly linked target
+                conn.on('data', (data) => {
+                    const t = targets[conn.peer];
+                    if (!t) return;
+
+                    t.lastSeen = Date.now();
+
+                    if (data.device) t.device = data.device;
+                    if (data.browser) t.browser = data.browser;
+                    if (data.ip && data.ip !== '...') t.ip = data.ip;
+                    if (data.geo && data.geo !== '...') t.geo = data.geo;
+                    if (data.battery && data.battery !== 'N/A') t.battery = data.battery;
+                    if (data.heading !== undefined) t.heading = data.heading;
+                    if (data.posture) t.posture = data.posture;
+
+                    // Geolocation initialization for street map
+                    if (data.lat && data.lon) {
+                        if (!t.lat || !t.lon) {
+                            t.lat = data.lat;
+                            t.lon = data.lon;
+                            if (!mapCentered) {
+                                mapCentered = true;
+                                map.setView([t.lat, t.lon], 16);
+                            }
+                            initMapMarker(t);
+                        }
+                    }
+
+                    // Steps handling
+                    if (data.step || (data.stepCount !== undefined && data.stepCount > t.steps)) {
+                        const targetStepCount = data.stepCount !== undefined ? data.stepCount : (t.steps + 1);
+                        const delta = targetStepCount - t.steps;
+
+                        for (let i = 0; i < delta; i++) {
+                            t.steps++;
+                            const stride = 0.72;
+                            t.distance = parseFloat((t.steps * stride).toFixed(1));
+
+                            const rad = (t.heading || 0) * (Math.PI / 180);
+                            const lastPt = t.path[t.path.length - 1] || { x: 0, y: 0 };
+                            const nextX = lastPt.x + (stride * Math.sin(rad));
+                            const nextY = lastPt.y + (stride * Math.cos(rad));
+                            t.path.push({ x: nextX, y: nextY });
+
+                            if (t.path.length > 800) t.path.shift();
+
+                            updateSimulatedGpsMap(t, stride, t.heading);
+                        }
+                    }
+
+                    updateTargetTable();
+                });
+
+                conn.on('close', () => {
+                    if (targets[conn.peer]) {
+                        targets[conn.peer].posture = 'DISCONNECTED';
+                        updateTargetTable();
+                    }
+                });
+            });
+
+            peer.on('error', (err) => {
+                console.warn("Peer server error:", err);
+                if (err.type === 'unavailable-id') {
+                    console.log("ID in use, retrying...");
+                }
+            });
+        } catch(e) {
+            console.warn(e);
+        }
+    }
+    initRadarPeer();
+
     function initMapMarker(target) {
         if (!target.lat || !target.lon) return;
         if (!target.mapMarker) {
@@ -433,7 +427,6 @@
         }
     }
 
-    // Advance simulated Leaflet polyline along compass heading
     function updateSimulatedGpsMap(target, strideMeters, headingDeg) {
         if (!target.lat || !target.lon) {
             const center = map.getCenter();
@@ -443,7 +436,6 @@
 
         initMapMarker(target);
 
-        // Geodesic Harversine step translation
         const dLat = (strideMeters * Math.cos(headingDeg * Math.PI / 180)) / 111111;
         const dLon = (strideMeters * Math.sin(headingDeg * Math.PI / 180)) / (111111 * Math.cos(target.lat * Math.PI / 180));
 
@@ -466,7 +458,6 @@
     function getDynamicMaxRange() {
         if (typeof manualRange === 'number') return manualRange;
 
-        // Auto-Fit: Calculate max distance reached by ANY target
         let maxRecorded = 20;
         Object.values(targets).forEach(t => {
             t.path.forEach(pt => {
@@ -475,7 +466,6 @@
             });
         });
 
-        // Add 25% safety margin and round up to nice interval (25, 50, 100, 200, 300...)
         const required = maxRecorded * 1.25;
         if (required <= 25) return 25;
         if (required <= 50) return 50;
@@ -511,7 +501,6 @@
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Label
             ctx.fillStyle = 'rgba(34, 197, 94, 0.6)';
             ctx.font = "11px 'JetBrains Mono', monospace";
             ctx.fillText(distLabel, cx + r - 32, cy - 6);
@@ -521,10 +510,8 @@
         ctx.strokeStyle = 'rgba(34, 197, 94, 0.25)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(cx, cy - maxRadius);
-        ctx.lineTo(cx, cy + maxRadius);
-        ctx.moveTo(cx - maxRadius, cy);
-        ctx.lineTo(cx + maxRadius, cy);
+        ctx.moveTo(cx, cy - maxRadius); ctx.lineTo(cx, cy + maxRadius);
+        ctx.moveTo(cx - maxRadius, cy); ctx.lineTo(cx + maxRadius, cy);
         ctx.stroke();
 
         ctx.fillStyle = '#4ade80';
